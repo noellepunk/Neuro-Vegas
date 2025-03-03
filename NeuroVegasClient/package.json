@@ -1,0 +1,12 @@
+{
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node ."
+  },
+  "dependencies": {
+    "ini": "^5.0.0",
+    "neuro-game-sdk": "^1.0.4",
+    "ps-list": "^8.1.1"
+  }
+}
