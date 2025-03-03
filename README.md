@@ -36,7 +36,7 @@ If you are attempting to install this mod on a fresh installation of New Vegas, 
 
 
 1. Download the latest version of the mod from the Releases tab
-2. Install the mod through your mod manager, if you are not using a mod manager (which you really should be) then place everything within the zip file into the "Data" folder in your New Vegas directory
+2. Install the mod through your mod manager, if you are not using a mod manager (which you really should be) then place everything inside the `NeuroVegas` folder within the zip file into the `Data` folder in your New Vegas directory
 3. If you plan on using the neuro integration part of this mod then download the NeuroVegasClient from this repository (if not then, open the `NeuroConfig.ini` file located at `Data\Config\NeuroConfig.ini` and set EnableNeuroIntegration from 1 to 0 and enjoy!)
 5. Within the NeuroVegasClient folder, open the `config.ini` file and set the directory of your New Vegas installation and the websocket URL you wish to connect to
 6. Run `npm install` in the NeuroVegasClient folder
