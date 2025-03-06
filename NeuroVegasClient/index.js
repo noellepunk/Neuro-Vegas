@@ -52,6 +52,24 @@ function checkGameRunning() {
         startupcontextsent = 0;
         ResetData();
         neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'check_inventory', 'save_game','check_health_status','check_inventory']);
+        if (waiting_for_action_result == 1) {
+          waiting_for_action_result = 0;
+          if (weapon_action_force ==  1) {
+            neuroClient.sendActionResult(actionresult_data.id, true, "Error! Previous action was cancelled because the game was closed.");
+          } else {
+            neuroClient.sendActionResult(actionresult_data.id, false, "Previous action was cancelled because the game was closed.");
+          }
+          writeDataToFile("0","equipresult.txt");
+          writeDataToFile("0","unequipresult.txt");
+          writeDataToFile("0","aidresult.txt");
+          writeDataToFile("0","ammoresult.txt");
+          writeDataToFile("0","jumpresult.txt");
+          writeDataToFile("0","stopfollowresult.txt");
+          writeDataToFile("0","resumefollowresult.txt");
+          writeDataToFile("0","setdefensiveresult.txt");
+          writeDataToFile("0","setoffensiveresult.txt");
+          writeDataToFile("0","saveresult.txt");
+        }
       }
     }
   });
@@ -181,6 +199,21 @@ let currenttime = "";
 let player_stole_neuros_kill = 0;
 
 let indoors = 0;
+
+let waiting_for_action_result = 0;
+let actionresult_data = 0;
+let weapon_to_equip = "";
+let consumable_to_use = "";
+let ammo_to_equip = "";
+
+let waiting_for_equip_result = 0;
+let waiting_for_aid_result = 0;
+let waiting_for_ammo_result = 0;
+let waiting_for_follow_result = 0;
+let waiting_for_combatmoderesult = 0;
+let waiting_for_save_result = 0;
+let waiting_for_jump_result = 0;
+
 //#endregion
 
 writeDataToFile(String(disable_writing),"disable_writing.txt");
@@ -218,6 +251,38 @@ function ResetData () {
   writeDataToFile("0","disable_writing.txt");
   writeDataToFile("0","isindialogue.txt");
 }
+
+function ResetDataKnocked() {
+  writeDataToFile("0","weapon_to_equip.txt");
+  writeDataToFile("0","ammo_to_equip.txt");
+  writeDataToFile("0","jump.txt");
+  writeDataToFile("-1","combatmode.txt");
+  writeDataToFile("0","flee.txt");
+  writeDataToFile("0","follow.txt");
+  writeDataToFile("-1","behaviorstate.txt");
+  writeDataToFile("0","forcefollow.txt");
+  writeDataToFile("-1","is_in_combat.txt");
+  writeDataToFile("-1","current_fleestate.txt");
+  writeDataToFile("-1","current_combatmode.txt");
+  writeDataToFile("-1","current_weapon.txt");
+  writeDataToFile("0","actor_is_speaking.txt");
+  writeDataToFile("0","dialogue.txt");
+  writeDataToFile("0","nearbyhostiles.txt");
+  writeDataToFile("0","heal.txt");
+  writeDataToFile("0","inventoryopen.txt");
+  writeDataToFile("0","outofammo.txt");
+  writeDataToFile("0","weaponbroken.txt");
+  writeDataToFile("-1","totalammo.txt");
+  writeDataToFile("0","is_paused.txt");
+  writeDataToFile("0","queststatus.txt");
+  writeDataToFile("0","genericdialogue.txt");
+  writeDataToFile("0","dialogueresponse.txt");
+  writeDataToFile("-1","sitting.txt");
+  writeDataToFile("-1","limb.txt");
+  writeDataToFile("0","disable_writing.txt");
+  writeDataToFile("0","isindialogue.txt");
+}
+
 //#endregion
 
 // game state values
@@ -302,6 +367,16 @@ const genericdialogueFilePath = writeDataToFile("0","genericdialogue.txt");
 const isindialogueFilePath = writeDataToFile("0","isindialogue.txt");
 const levelFilePath = writeDataToFile("-1","level.txt");
 const ignorelevelupFilePath = writeDataToFile("0","ignorelevelup.txt");
+const equipresultFilePath = writeDataToFile("0","equipresult.txt");
+const unequipresultFilePath = writeDataToFile("0","unequipresult.txt");
+const aidresultFilePath = writeDataToFile("0","aidresult.txt");
+const ammoresultFilePath = writeDataToFile("0","ammoresult.txt");
+const jumpresultFilePath = writeDataToFile("0","jumpresult.txt");
+const stopfollowresultFilePath = writeDataToFile("0","stopfollowresult.txt");
+const resumefollowresultFilePath = writeDataToFile("0","resumefollowresult.txt");
+const setdefensiveresultFilePath = writeDataToFile("0","setdefensiveresult.txt");
+const setoffensiveresultFilePath = writeDataToFile("0","setoffensiveresult.txt");
+const saveresultFilePath = writeDataToFile("0","saveresult.txt");
 writeDataToFile("0","weaponforce.txt");
 writeDataToFile("0","ammoforce.txt");
 writeDataToFile("0","aidforce.txt");
@@ -428,193 +503,193 @@ const save_game = {
 //#region Consumable Types
 //list the type of each consumable item, theres probably a better way to do this but i wouldnt know
 const consumableMap = {
-  "Ant egg": "Food",
-  "Ant meat": "Food",
-  "Barrel cactus fruit": "Food",
-  "Banana yucca fruit": "Food",
-  "Bighorner meat": "Food",
-  "Bighorner steak": "Food",
-  "Black blood sausage": "Food",
-  "BlamCo Mac & Cheese": "Food",
-  "Bloatfly meat": "Food",
-  "Bloatfly slider": "Food",
-  "Blood sausage": "Food",
-  "Brahmin meat": "Food",
-  "Brahmin steak": "Food",
-  "Brahmin Wellington": "Food",
-  "Broc flower": "Food",
-  "Bubble gum": "Food",
-  "Buffalo gourd seed": "Food",
-  "Caravan lunch": "Food",
-  "Cave fungus": "Food",
-  "Cazador egg": "Food",
-  "Cook-Cook's fiend stew": "Food",
-  "Coyote meat": "Food",
-  "Coyote steak": "Food",
-  "Cram": "Food",
-  "Crispy squirrel bits": "Food",
-  "Crunchy mutfruit": "Food",
-  "Dandy Boy Apples": "Food",
-  "Daturana": "Food",
-  "Desert salad": "Food",
-  "Dog meat": "Food",
-  "Dog steak": "Food",
-  "Fancy Lads Snack Cakes": "Food",
-  "Fire ant egg": "Food",
-  "Fire ant fricassée": "Food",
-  "Fire ant meat": "Food",
-  "Fresh apple": "Food",
-  "Fresh carrot": "Food",
-  "Fresh pear": "Food",
-  "Fresh potato": "Food",
-  "Gecko kebab": "Food",
-  "Gecko meat": "Food",
-  "Gecko steak": "Food",
-  "Giant rat meat": "Food",
-  "Grilled mantis": "Food",
-  "Gum drops": "Food",
-  "Honey mesquite pod": "Food",
-  "Human flesh": "Food",
-  "Human remains": "Food",
-  "Iguana bits": "Food",
-  "Iguana-on-a-stick": "Food",
-  "Imitation strange meat pie": "Food",
-  "InstaMash": "Food",
-  "Irr. banana yucca": "Food",
-  "Irr. barrel cactus": "Food",
-  "Irr. Mac & Cheese": "Food",
-  "Irradiated Cram": "Food",
-  "Irr. crunchy mutfruit": "Food",
-  "Irr. Dandy Boy Apples": "Food",
-  "Irr. Fancy Lads": "Food",
-  "Irr. gecko meat": "Food",
-  "Irradiated InstaMash": "Food",
-  "Irradiated mutfruit": "Food",
-  "Irr. Pork n' Beans": "Food",
-  "Irridiated potato": "Food",
-  "Irr. Potato Crisps": "Food",
-  "Irr. Salisbury Steak": "Food",
-  "Irr. Sugar Bombs": "Food",
-  "Irr. YumYum D. Eggs": "Food",
-  "Jalapeño pepper": "Food",
-  "Junk food": "Food",
-  "Lakelurk egg": "Food",
-  "Lakelurk meat": "Food",
-  "Maize": "Food",
-  "Mole rat meat": "Food",
-  "Mole rat stew": "Food",
-  "MRE": "Food",
-  "Mushroom cloud": "Food",
-  "Mutant cave fungus": "Food",
-  "Mutfruit": "Food",
-  "Nevada agave fruit": "Food",
-  "Nightstalker tail": "Food",
-  "Noodles": "Food",
-  "Pinto bean pod": "Food",
-  "Pinyon nut": "Food",
-  "Pork n' Beans": "Food",
-  "Potato Crisps": "Food",
-  "Preserved meat": "Food",
-  "Pre-War steak": "Food",
-  "Prickly pear fruit": "Food",
-  "Radroach meat": "Food",
-  "Rat meat": "Food",
-  "Ruby's casserole": "Food",
-  "Sacred datura root": "Food",
-  "Salient Green": "Food",
-  "Salisbury Steak": "Food",
-  "Spore carrier sap ": "Food",
-  "Spore plant pods": "Food",
-  "Squirrel on a stick": "Food",
-  "Squirrel stew": "Food",
-  "Strange meat": "Food",
-  "Strange meat pie": "Food",
-  "Sugar Bombs": "Food",
-  "Thick red paste": "Food",
-  "Thin red paste": "Food",
-  "Trail mix": "Food",
-  "Wasteland omelet": "Food",
-  "White horsenettle": "Food",
-  "Xander root": "Food",
-  "Yao guai meat": "Food",
-  "YumYum Deviled Eggs": "Food",
-  "Absinthe": "Drink",
-  "Atomic cocktail": "Alcohol",
-  "Battle brew": "Alcohol",
-  "Beer": "Alcohol",
-  "Bitter drink": "Drink",
-  "Black coffee": "Drink",
-  "Blood pack": "Drink",
-  "Dirty water": "Drink",
-  "Dixon's whiskey": "Alcohol",
-  "Ice cold Nuka-Cola": "Drink",
-  "Irradiated beer": "Alcohol",
-  "Irradiated scotch": "Alcohol",
-  "Irradiated Sunset Sarsaparilla": "Drink",
-  "Irradiated water": "Drink",
-  "Irradiated whiskey": "Alcohol",
-  "Jake Juice": "Alcohol",
-  "Large wasteland tequila": "Alcohol",
-  "Moonshine": "Alcohol",
-  "Nightstalker squeezin's": "Drink",
-  "Nuka-Cola": "Drink",
-  "Nuka-Cola Quantum": "Drink",
-  "Nuka-Cola Quartz": "Drink",
-  "Nuka-Cola Victory": "Drink",
-  "Purified water": "Drink",
-  "Rum & Nuka": "Alcohol",
-  "Scotch": "Alcohol",
-  "Sierra Madre martini": "Alcohol",
-  "Sunset Sarsaparilla": "Drink",
-  "Vodka": "Alcohol",
-  "Wasteland tequila": "Alcohol",
-  "Whiskey": "Alcohol",
-  "Wine": "Alcohol",
-  "Ant queen pheromones": "Chem",
-  "Antivenom": "Chem",
-  "Ant nectar": "Chem",
-  "Auto-inject stimpak": "Chem",
-  "Auto-inject super stimpak": "Chem",
-  "Blood Shield": "Chem",
-  "Buffout": "Chem",
-  "Cateye": "Chem",
-  "Coyote tobacco chew": "Chem",
-  "Datura antivenom": "Chem",
-  "Datura hide": "Chem",
-  "Dixon's Jet": "Chem",
-  "Doctor's bag": "Chem",
-  "Fiery purgative": "Chem",
-  "Fire ant nectar": "Chem",
-  "Fixer": "Chem",
-  "Ghost sight": "Chem",
-  "Healing poultice": "Chem",
-  "Healing powder": "Chem",
-  "Hydra": "Chem",
-  "Jet": "Chem",
-  "Med-X": "Chem",
-  "Medical supplies": "Chem",
-  "Mentats": "Chem",
-  "Party Time Mentats": "Chem",
-  "Psycho": "Chem",
-  "Rad-X": "Chem",
-  "RadAway": "Chem",
-  "Rebound": "Chem",
-  "Rocket": "Chem",
-  "Rushing water": "Chem",
-  "Slasher": "Chem",
-  "Steady": "Chem",
-  "Stimpak": "Chem",
-  "Super stimpak": "Chem",
-  "Turbo": "Chem",
-  "Ultrajet": "Chem",
-  "Weapon binding ritual": "Chem",
-  "Bleak venom": "Poison",
-  "CLoud Kiss": "Poison",
-  "Dark datura": "Poison",
-  "Mother Darkness": "Poison",
-  "Silver Sting": "Poison",
-  "Tremble": "Poison",
-}
+  "ant egg": "Food",
+  "ant meat": "Food",
+  "barrel cactus fruit": "Food",
+  "banana yucca fruit": "Food",
+  "bighorner meat": "Food",
+  "bighorner steak": "Food",
+  "black blood sausage": "Food",
+  "blamco mac & cheese": "Food",
+  "bloatfly meat": "Food",
+  "bloatfly slider": "Food",
+  "blood sausage": "Food",
+  "brahmin meat": "Food",
+  "brahmin steak": "Food",
+  "brahmin wellington": "Food",
+  "broc flower": "Food",
+  "bubble gum": "Food",
+  "buffalo gourd seed": "Food",
+  "caravan lunch": "Food",
+  "cave fungus": "Food",
+  "cazador egg": "Food",
+  "cook-cook's fiend stew": "Food",
+  "coyote meat": "Food",
+  "coyote steak": "Food",
+  "cram": "Food",
+  "crispy squirrel bits": "Food",
+  "crunchy mutfruit": "Food",
+  "dandy boy apples": "Food",
+  "daturana": "Food",
+  "desert salad": "Food",
+  "dog meat": "Food",
+  "dog steak": "Food",
+  "fancy lads snack cakes": "Food",
+  "fire ant egg": "Food",
+  "fire ant fricassée": "Food",
+  "fire ant meat": "Food",
+  "fresh apple": "Food",
+  "fresh carrot": "Food",
+  "fresh pear": "Food",
+  "fresh potato": "Food",
+  "gecko kebab": "Food",
+  "gecko meat": "Food",
+  "gecko steak": "Food",
+  "giant rat meat": "Food",
+  "grilled mantis": "Food",
+  "gum drops": "Food",
+  "honey mesquite pod": "Food",
+  "human flesh": "Food",
+  "human remains": "Food",
+  "iguana bits": "Food",
+  "iguana-on-a-stick": "Food",
+  "imitation strange meat pie": "Food",
+  "instamash": "Food",
+  "irr. banana yucca": "Food",
+  "irr. barrel cactus": "Food",
+  "irr. mac & cheese": "Food",
+  "irradiated cram": "Food",
+  "irr. crunchy mutfruit": "Food",
+  "irr. dandy boy apples": "Food",
+  "irr. fancy lads": "Food",
+  "irr. gecko meat": "Food",
+  "irradiated instamash": "Food",
+  "irradiated mutfruit": "Food",
+  "irr. pork n' beans": "Food",
+  "irridiated potato": "Food",
+  "irr. potato crisps": "Food",
+  "irr. salisbury steak": "Food",
+  "irr. sugar bombs": "Food",
+  "irr. yumyum d. eggs": "Food",
+  "jalapeño pepper": "Food",
+  "junk food": "Food",
+  "lakelurk egg": "Food",
+  "lakelurk meat": "Food",
+  "maize": "Food",
+  "mole rat meat": "Food",
+  "mole rat stew": "Food",
+  "mre": "Food",
+  "mushroom cloud": "Food",
+  "mutant cave fungus": "Food",
+  "mutfruit": "Food",
+  "nevada agave fruit": "Food",
+  "nightstalker tail": "Food",
+  "noodles": "Food",
+  "pinto bean pod": "Food",
+  "pinyon nut": "Food",
+  "pork n' beans": "Food",
+  "potato crisps": "Food",
+  "preserved meat": "Food",
+  "pre-war steak": "Food",
+  "prickly pear fruit": "Food",
+  "radroach meat": "Food",
+  "rat meat": "Food",
+  "ruby's casserole": "Food",
+  "sacred datura root": "Food",
+  "salient green": "Food",
+  "salisbury steak": "Food",
+  "spore carrier sap": "Food",
+  "spore plant pods": "Food",
+  "squirrel on a stick": "Food",
+  "squirrel stew": "Food",
+  "strange meat": "Food",
+  "strange meat pie": "Food",
+  "sugar bombs": "Food",
+  "thick red paste": "Food",
+  "thin red paste": "Food",
+  "trail mix": "Food",
+  "wasteland omelet": "Food",
+  "white horsenettle": "Food",
+  "xander root": "Food",
+  "yao guai meat": "Food",
+  "yumyum deviled eggs": "Food",
+  "absinthe": "Drink",
+  "atomic cocktail": "Alcohol",
+  "battle brew": "Alcohol",
+  "beer": "Alcohol",
+  "bitter drink": "Drink",
+  "black coffee": "Drink",
+  "blood pack": "Drink",
+  "dirty water": "Drink",
+  "dixon's whiskey": "Alcohol",
+  "ice cold nuka-cola": "Drink",
+  "irradiated beer": "Alcohol",
+  "irradiated scotch": "Alcohol",
+  "irradiated sunset sarsaparilla": "Drink",
+  "irradiated water": "Drink",
+  "irradiated whiskey": "Alcohol",
+  "jake juice": "Alcohol",
+  "large wasteland tequila": "Alcohol",
+  "moonshine": "Alcohol",
+  "nightstalker squeezin's": "Drink",
+  "nuka-cola": "Drink",
+  "nuka-cola quantum": "Drink",
+  "nuka-cola quartz": "Drink",
+  "nuka-cola victory": "Drink",
+  "purified water": "Drink",
+  "rum & nuka": "Alcohol",
+  "scotch": "Alcohol",
+  "sierra madre martini": "Alcohol",
+  "sunset sarsaparilla": "Drink",
+  "vodka": "Alcohol",
+  "wasteland tequila": "Alcohol",
+  "whiskey": "Alcohol",
+  "wine": "Alcohol",
+  "ant queen pheromones": "Chem",
+  "antivenom": "Chem",
+  "ant nectar": "Chem",
+  "auto-inject stimpak": "Chem",
+  "auto-inject super stimpak": "Chem",
+  "blood shield": "Chem",
+  "buffout": "Chem",
+  "cateye": "Chem",
+  "coyote tobacco chew": "Chem",
+  "datura antivenom": "Chem",
+  "datura hide": "Chem",
+  "dixon's jet": "Chem",
+  "doctor's bag": "Chem",
+  "fiery purgative": "Chem",
+  "fire ant nectar": "Chem",
+  "fixer": "Chem",
+  "ghost sight": "Chem",
+  "healing poultice": "Chem",
+  "healing powder": "Chem",
+  "hydra": "Chem",
+  "jet": "Chem",
+  "med-x": "Chem",
+  "medical supplies": "Chem",
+  "mentats": "Chem",
+  "party time mentats": "Chem",
+  "psycho": "Chem",
+  "rad-x": "Chem",
+  "radaway": "Chem",
+  "rebound": "Chem",
+  "rocket": "Chem",
+  "rushing water": "Chem",
+  "slasher": "Chem",
+  "steady": "Chem",
+  "stimpak": "Chem",
+  "super stimpak": "Chem",
+  "turbo": "Chem",
+  "ultrajet": "Chem",
+  "weapon binding ritual": "Chem",
+  "bleak venom": "Poison",
+  "cloud kiss": "Poison",
+  "dark datura": "Poison",
+  "mother darkness": "Poison",
+  "silver sting": "Poison",
+  "tremble": "Poison",
+};
 //#endregion
 
 /*
@@ -640,8 +715,264 @@ setInterval(() => {
 }, frameDuration);
 
 function update() {
-  checkGameRunning();
+
+checkGameRunning();
 if (isRunning == true) {
+
+
+//#region Action Results
+if (waiting_for_action_result == 1) {
+  if (actionresult_data.name == "equip_weapon") {
+    readFile(equipresultFilePath, 'utf-8', (err, equipresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (equipresultdata !== "" && inventoryopen == 0) {
+        if (equipresultdata == "1") {
+          writeDataToFile("0","equipresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, weapon_to_equip + " has been equipped.");
+          current_weapon = weapon_to_equip;
+          weapon_to_equip = "";
+          neuroClient.registerActions([unequipweapon]);
+          waiting_for_action_result = 0;
+        } else if (equipresultdata == "2") {
+          writeDataToFile("0","equipresult.txt");
+          writeDataToFile("0","weapon_to_equip.txt"); 
+          neuroClient.sendActionResult(actionresult_data.id, false, weapon_to_equip + " could not be equipped because it is not in your inventory.");
+          weapon_to_equip = "";
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "use_consumable") {
+    readFile(aidresultFilePath, 'utf-8', (err, aidresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (aidresultdata !== "" && inventoryopen == 0) {
+        if (aidresultdata == "1") {
+          writeDataToFile("0","aidresult.txt");
+          const consumableType = consumableMap[consumable_to_use.toLowerCase()];  
+          if (consumableType == "Food") {
+            const foodResponses = [
+              `You ate ${consumable_to_use}, yummy!`,
+              `You ate ${consumable_to_use}, delicious!`,
+              `You ate ${consumable_to_use}, tasty!`,
+              `You ate ${consumable_to_use}, tastes good!`,
+              `You ate ${consumable_to_use}, tastes meh...`
+            ];
+            const randomResponse = foodResponses[Math.floor(Math.random() * foodResponses.length)];
+            neuroClient.sendActionResult(actionresult_data.id, true, randomResponse);
+          } else if (consumableType == "Drink") {
+            if (consumable_to_use == "Irradiated water") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You feel well hydrated, but also a little queasy...");
+            } else if (consumable_to_use == "Blood pack") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "It tastes like metal...");
+            } else if (consumable_to_use == "Nightstalker squeezin's") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You feel sneakier...");
+            } else if (consumable_to_use == "Dirty water") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "The taste isn't great, but you still feel hydrated.");
+            } else if (consumable_to_use == "Purified water") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You feel well hydrated!");
+            } else if (consumable_to_use == "Nuka-Cola" || consumable_to_use == "Nuka-Cola Quantum" || consumable_to_use == "Nuka-Cola Quartz" || consumable_to_use == "Nuka-Cola Victory") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You feel refreshed!");
+            } else {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! ");
+            }
+          } else if (consumableType == "Alcohol") {
+            neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You feel a little tipsy...");
+          } else if (consumableType == "Chem") {
+            if (consumable_to_use == "Stimpak" || consumable_to_use == "Super stimpak") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You injected a " + consumable_to_use + "! " + "You can feel your wounds beginning to heal!");
+            } else if (consumable_to_use == "RadAway") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You consumed " + consumable_to_use + "! " + "You can feel the radiation leaving your body!");
+            } else if (consumable_to_use == "Rad-X") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You consumed " + consumable_to_use + "! " + "You feel a little less vulnerable to radiation!");
+            } else if (consumable_to_use == "Med-X") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You injected " + consumable_to_use + "! " + "You can feel your pain fading away! (+25 Damage Resistance for 4 minutes)");
+            } else if (consumable_to_use == "Psycho") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You injected " + consumable_to_use + "! " + "You feel like you can take on the world! (+25% Damage for 4 minutes)");
+            } else if (consumable_to_use == "Slasher") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You injected " + consumable_to_use + "! " + "You feel invincible! (+25% Damage and +25 Damage Resistance for 1 minute)");
+            } else if (consumable_to_use == "Turbo") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You inhaled " + consumable_to_use + "! " + "Time feels like it's moving in slow motion...");
+            } else if (consumable_to_use == "Fixer") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You took some " + consumable_to_use + "! You feel a little woozy."); 
+            } else if (consumable_to_use == "Mentats") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You took some " + consumable_to_use + "! " + "You feel smarter! (+2 Intelligence, +2 Perception, and +1 Charisma for 4 minutes)");
+            } else if (consumable_to_use == "Party Time Mentats") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You took some " + consumable_to_use + "! " + "You feel smarter and more charismatic! (+2 Intelligence, +2 Perception, and +5 Charisma for 1 minute)");
+            } else if (consumable_to_use == "Jet" || consumable_to_use == "Dixon's Jet") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You inhaled " + consumable_to_use + "! " + "Ohhh yeah, that feels good!");
+            } else if (consumable_to_use == "Ultrajet") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You inhaled " + consumable_to_use + "! " + "Ohhh yeah, that feels really good!");
+            } else if (consumable_to_use == "Buffout") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You took some " + consumable_to_use + "! " + "You can feel your body getting stronger! (+2 Strength, +3 Endurance, and +60 max HP for 4 minutes)");
+            } else if (consumable_to_use == "Doctor's bag" || consumable_to_use == "Medical supplies") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You used " + consumable_to_use + "! " + "Your limbs have never felt better! (All limb damage repaired)");
+            } else if (consumable_to_use == "Steady") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You inhaled " + consumable_to_use + "! " + "You can feel your hands begin to relax. (Weapon spread has been reduced for 1 minute)");
+            } else if (consumable_to_use == "Antivenom" || consumable_to_use == "Datura antivenom") {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You drank some " + consumable_to_use + "! " + "Any and all poison effects have been cured!"); 
+            } else {
+              neuroClient.sendActionResult(actionresult_data.id, true, "You used " + consumable_to_use + "! "); 
+            }
+          } else if (consumableType == "Poison") {
+            neuroClient.sendActionResult(actionresult_data.id, true, "You drank " + consumable_to_use + "! " + "You begin to feel very sick...");
+          } else if (consumable_to_use == "Weapon repair kit"){
+            neuroClient.sendActionResult(actionresult_data.id, true, "You used " + consumable_to_use + "! " + "Your weapon's condition has been improved!");
+          } else if (consumable_to_use == "Stealth Boy"){
+            neuroClient.sendActionResult(actionresult_data.id, true, "You used " + consumable_to_use + "! " + "You have turned invisible for 2 minutes!");
+          } else {
+            neuroClient.sendActionResult(actionresult_data.id, true, "You used " + consumable_to_use + "!");
+          }
+          consumable_to_use = "";
+          waiting_for_action_result = 0;
+        } else if (aidresultdata == "2") {
+          writeDataToFile("0","aidresult.txt");
+          writeDataToFile("0","aid_to_use.txt");
+          neuroClient.sendActionResult(actionresult_data.id, false, consumable_to_use + " could not be used because it is not in your inventory.");
+          consumable_to_use = "";
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "switch_ammo") {
+    readFile(ammoresultFilePath, 'utf-8', (err, ammoresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (ammoresultdata !== "" && inventoryopen == 0) {
+        if (ammoresultdata == "1") {
+          writeDataToFile("0","ammoresult.txt");
+          writeDataToFile("0","ammo_to_equip.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, 'Ammo type for ' + current_weapon + ' has been swapped to ' + ammo_to_equip);
+          ammo_to_equip = "";
+          waiting_for_action_result = 0;
+        } else if (ammoresultdata == "2") {
+          writeDataToFile("0","ammoresult.txt");
+          writeDataToFile("0","ammo_to_equip.txt");
+          neuroClient.sendActionResult(actionresult_data.id, false, ammo_to_equip + " could not be loaded because it is not in your inventory.");
+          ammo_to_equip = "";
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "unequip_weapon") {
+    readFile(unequipresultFilePath, 'utf-8', (err, unequipresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (unequipresultdata !== "" && inventoryopen == 0) {
+        if (unequipresultdata == "1") {
+          writeDataToFile("0","unequipresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, current_weapon + " has been un-equipped.");
+          current_weapon = "0";
+          waiting_for_action_result = 0;
+        } else if (unequipresultdata == "2") {
+          writeDataToFile("0","unequipresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, false, "No weapon is currently equipped.");
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "stop_following") {
+    readFile(stopfollowresultFilePath, 'utf-8', (err, stopfollowresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (stopfollowresultdata !== "") {
+        if (stopfollowresultdata == "1") {
+          writeDataToFile("0","stopfollowresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, "You have stopped following the player.");
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "resume_following") {
+    readFile(resumefollowresultFilePath, 'utf-8', (err, resumefollowresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (resumefollowresultdata !== "") {
+        if (resumefollowresultdata == "1") {
+          writeDataToFile("0","resumefollowresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, "You have resumed following the player.");
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "set_combat_mode_to_defensive") {
+    readFile(setdefensiveresultFilePath, 'utf-8', (err, setdefensiveresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (setdefensiveresultdata !== "") {
+        if (setdefensiveresultdata == "1") {
+          writeDataToFile("0","setdefensiveresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, 'Combat mode set to: "Defensive", you will now only initiate combat in self-defense.');
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "set_combat_mode_to_offensive") {
+    readFile(setoffensiveresultFilePath, 'utf-8', (err, setoffensiveresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (setoffensiveresultdata !== "") {
+        if (setoffensiveresultdata == "1") {
+          writeDataToFile("0","setoffensiveresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, 'Combat mode set to: "Offensive", enemies will now be attacked on sight.');
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "save_game") {
+    readFile(saveresultFilePath, 'utf-8', (err, saveresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (saveresultdata !== "") {
+        if (saveresultdata == "1") {
+          writeDataToFile("0","saveresult.txt");
+          if (is_in_combat == 1) {
+            neuroClient.sendActionResult(actionresult_data.id, false, "You cannot save the game while in combat!");
+          } else {
+            neuroClient.sendActionResult(actionresult_data.id, true, "Game has been saved!");
+          }
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  } else if (actionresult_data.name == "jump") {
+    readFile(jumpresultFilePath, 'utf-8', (err, jumpresultdata) => {
+      if (err) {
+        console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+        return;
+      }
+      if (jumpresultdata !== "") {
+        if (jumpresultdata == "1") {
+          writeDataToFile("0","jumpresult.txt");
+          neuroClient.sendActionResult(actionresult_data.id, true, "You have performed a jump!");
+          waiting_for_action_result = 0;
+        }
+      }
+    });
+  }
+}
+//#endregion
+
+
     //game state values
     //-1 = game not open
     //0 = main menu
@@ -800,6 +1131,7 @@ if (isRunning == true) {
                                 equippable_ammo = "";
                               } else if (gamestate == 1) {
                                 neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
+                                
                                 startupcontextsent = 1;                    
   
                                   neuroClient.sendContext(startupstring,true);
@@ -1221,10 +1553,10 @@ if (isRunning == true) {
                       if (unconsciousdata[1] == playername) {
                         neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious by ${unconsciousdata[1]}! (Friendly Fire)\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                       } else {
-                        if (unconsciousdata[1] != "") {
+                        if (unconsciousdata[1] !== "" && unconsciousdata[1] !== " ") {
                           neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious by ${unconsciousdata[1]}!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                         } else {
-                          neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious by ${unconsciousdata[1]}!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
+                          neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                         }
                       }
                       is_unconscious = 1;
@@ -1232,23 +1564,23 @@ if (isRunning == true) {
                       equippable_weapons = "";
                       equippable_aid = "";
                       equippable_ammo = "";
-                      ResetData();
+                      ResetDataKnocked();
                       neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'check_inventory', 'save_game','check_health_status']);
                     }else if (Number(unconsciousdata[0]) == 0 && is_unconscious == 1) {
                       setTimeout(() => {    
                         neuroClient.sendContext(`You've recovered consciousness!\nHealth is at: ${currenthealth}/${maxhealth}`);
                       }, 250);
                       neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
-                      ResetData();
+                      ResetDataKnocked();
                       disable_writing = 0;
                       is_unconscious = 0;
                     }
                 } else if (revivedata == "1") {
                   if (Number(unconsciousdata[0]) == 1 && is_unconscious == 0) {
-                    if (unconsciousdata[1] == playername) {
+                    if (unconsciousdata[1] === playername) {
                       neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious by ${unconsciousdata[1]}! (Friendly Fire)\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                     } else {
-                      if (unconsciousdata[1] != "") {
+                      if (unconsciousdata[1] !== "" && unconsciousdata[1] !== " ") {
                         neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious by ${unconsciousdata[1]}!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                       } else {
                         neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
@@ -1259,14 +1591,14 @@ if (isRunning == true) {
                     equippable_aid = "";
                     equippable_ammo = "";
                     disable_writing = 1;
-                    ResetData();
+                    ResetDataKnocked();
                   }else if (Number(unconsciousdata[0]) == 0 && is_unconscious == 1 && currenthealth != 0) {
                       setTimeout(() => {    
                         neuroClient.sendContext(`${playername} has revived you!\nHealth is at: ${currenthealth}/${maxhealth}`);
                       }, 250);
                       writeDataToFile("0","revived.txt");
                       neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
-                      ResetData();
+                      ResetDataKnocked();
                       disable_writing = 0;
                       is_unconscious = 0;
                   }
@@ -1630,14 +1962,10 @@ if (isRunning == true) {
         //quest successfully completed
         if (queststatusdata == "1") {
           neuroClient.sendContext(`QUEST COMPLETED: ${currentquest}`);
-          currentquest = "0";
-          questobjs = "0";
           writeDataToFile("0", "queststatus.txt");
           //quest failed 
         } else if (queststatusdata == "2") {
           neuroClient.sendContext(`QUEST FAILED: ${currentquest}`);
-          currentquest = "0";
-          questobjs = "0";
           writeDataToFile("0", "queststatus.txt");
         }
 
@@ -1887,6 +2215,8 @@ if (isRunning == true) {
     });
   } else {
     ResetData();
+    currentquest = "0";
+    questobjs = "0";
   }
 }
 //#endregion
@@ -1912,7 +2242,7 @@ neuroClient.onAction(actionData => {
     if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blue Narration" && currentlocation != "Slide Show Theatre Room") {
       if (is_paused == 0) {
         if (gamestate == 1) {
-          if (isindialoguedata == "0") {
+          if (isindialoguedata == "0" || actionData.name === 'check_inventory' || actionData.name === 'check_health_status') {
             if (is_unconscious == 0) {
               if (playerdead == 0) {
                 if (actionData.name === 'check_health_status') {
@@ -1933,7 +2263,9 @@ neuroClient.onAction(actionData => {
                       }
                     }
                     if (headhealth != 0 && torsohealth != 0 && leftarmhealth != 0 && rightarmhealth != 0 && leftleghealth != 0 && rightleghealth != 0) {
-                      neuroClient.sendActionResult(actionData.id, true, `Health is at: ${currenthealth}/${maxhealth}\nAll limbs are healthy!`)
+                      setTimeout(() => {
+                        neuroClient.sendActionResult(actionData.id, true, `Health is at: ${currenthealth}/${maxhealth}\nAll limbs are healthy!`)
+                      }, 200);
                     } else {
                       let limbstring = "";
                       if (headhealth <= 0) {
@@ -1954,7 +2286,9 @@ neuroClient.onAction(actionData => {
                       if (rightleghealth <= 0) {
                           limbstring += "Right leg has been crippled!\n";
                       }
-                      neuroClient.sendActionResult(actionData.id, true, `Health is at: ${currenthealth}/${maxhealth}\n${limbstring}`)
+                      setTimeout(() => {
+                        neuroClient.sendActionResult(actionData.id, true, `Health is at: ${currenthealth}/${maxhealth}\n${limbstring}`)
+                      }, 200);
                     }
                   });
 
@@ -1963,7 +2297,6 @@ neuroClient.onAction(actionData => {
 
                 //check inventory
                 if (actionData.name === 'check_inventory') {
-                  if (inventoryopen == 0) {
                     readFile(inventory_namesFilePath, 'utf-8', (err, invdata) => {
                       if (err) {
                           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -2006,23 +2339,24 @@ neuroClient.onAction(actionData => {
                               invstring += `, ${itemString}`;
                             }
                           });
-
-                          neuroClient.sendActionResult(actionData.id, true, `Inventory currently contains: ${invstring}`);
+                          setTimeout(() => {
+                            neuroClient.sendActionResult(actionData.id, true, `Inventory currently contains: ${invstring}`);
+                          }, 200);
                         } else {
-                          neuroClient.sendActionResult(actionData.id, true, 'Your inventory is currently empty.');
+                          setTimeout(() => {
+                            neuroClient.sendActionResult(actionData.id, true, 'Your inventory is currently empty.');
+                          }, 200);
                         }
                       });
                     });
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while ${playername} has your interaction menu open.`);
-                  }
                   return;
                 }
               //set combat mode to defensive
                 if (actionData.name === 'set_combat_mode_to_defensive') {
                   writeDataToFile(String(1) + "\n" + String(1),"combatmode.txt");
                   neuroClient.unregisterActions(['set_combat_mode_to_defensive'])
-                  neuroClient.sendActionResult(actionData.id, true, 'Combat mode set to: "Defensive", you will now only initiate combat in self-defense.')
+                  actionresult_data = actionData;
+                  waiting_for_action_result = 1;
                   return;
                 }  
 
@@ -2030,39 +2364,38 @@ neuroClient.onAction(actionData => {
                 if (actionData.name === 'set_combat_mode_to_offensive') {
                   writeDataToFile(String(1) + "\n" + String(0),"combatmode.txt");
                   neuroClient.unregisterActions(['set_combat_mode_to_offensive'])
-                  neuroClient.sendActionResult(actionData.id, true, 'Combat mode set to: "Offensive", you will now attack all hostiles on sight.')
+                  actionresult_data = actionData;
+                  waiting_for_action_result = 1;
                   return;
                 }  
 
                 //hold position and stop following the player
                 if (actionData.name === 'stop_following') {
-                  if (inventoryopen == 0) {
                     if (is_sitting == 0){
                       writeDataToFile(String(1) + "\n" + String(1),"follow.txt");
                       neuroClient.unregisterActions(['stop_following'])
-                      neuroClient.sendActionResult(actionData.id, true, 'You are no longer following ' + playername + '.')
+                      actionresult_data = actionData;
+                      waiting_for_action_result = 1;
                     } else {
-                      neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while sitting down.`)
+                      setTimeout(() => {
+                       neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while sitting down.`)
+                      }, 200);
                     }
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while ${playername} has your interaction menu open.`)
-                  }
                   return;
                 }  
 
                 //resume following the player
                 if (actionData.name === 'resume_following') {
-                  if (inventoryopen == 0) {
                     if (is_sitting == 0){
                       writeDataToFile(String(1) + "\n" + String(0),"follow.txt");
                       neuroClient.unregisterActions(['resume_following'])
-                      neuroClient.sendActionResult(actionData.id, true, 'You have resumed following ' + playername + '.')
+                      actionresult_data = actionData;
+                      waiting_for_action_result = 1;
                     } else {
-                      neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while sitting down.`)
+                      setTimeout(() => {
+                        neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while sitting down.`);
+                      }, 200);
                     }
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `You cannot use this action while ${playername} has your interaction menu open.`)
-                  }
                   return;
                 }  
                 /*
@@ -2094,7 +2427,7 @@ neuroClient.onAction(actionData => {
 
                 //equip the chosen weapon
                 if (actionData.name === 'equip_weapon') {
-                  if (inventoryopen == 0) {
+
                     readFile(neurovegaspath + "validweapons_name.txt", 'utf-8', (err, equipdata) => {
                       if (err) {
                           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -2107,21 +2440,23 @@ neuroClient.onAction(actionData => {
                         const weaponindex = equipdata.findIndex(item => item.toLowerCase() === selectedwep.toLowerCase());
                         if (weaponindex !== -1) {
                           neuroClient.unregisterActions(['equip_weapon']);
-                          writeDataToFile(String(1) + "\n" + String(weaponindex),"weapon_to_equip.txt");
-                          neuroClient.sendActionResult(actionData.id, true, selectedwep + " has been equipped.");
-                          current_weapon = selectedwep;
-                          neuroClient.registerActions([unequipweapon]);
+                          writeDataToFile(String(1) + "\n" + selectedwep,"weapon_to_equip.txt");
+                          waiting_for_action_result = 1;
+                          actionresult_data = actionData;
+                          weapon_to_equip = selectedwep;
                         } else {
-                          neuroClient.sendActionResult(actionData.id, false,  selectedwep + ' is not a valid weapon!');
+                          setTimeout(() => {
+                            neuroClient.sendActionResult(actionData.id, false,  selectedwep + ' is not a valid weapon!');
+                          }, 200);
                         }
                       } else {
                         neuroClient.unregisterActions(['equip_weapon']);
-                        neuroClient.sendActionResult(actionData.id, false,  'There are no weapons in your inventory to equip!');
+                        setTimeout(() => {
+                          neuroClient.sendActionResult(actionData.id, false,  'There are no weapons in your inventory to equip!');
+                        }, 200);
                       }
                     });
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `Weapons cannot be equipped while ${playername} has your interaction menu open.`);
-                  }
+
                   weapon_action_force = 0;
                   writeDataToFile("0","weaponforce.txt");
                   return;
@@ -2129,30 +2464,28 @@ neuroClient.onAction(actionData => {
 
                 //unequip the currently equipped weapon
                 if (actionData.name === 'unequip_weapon') {
-                  if (inventoryopen == 0) {
                     readFile(currentweaponFilePath, 'utf-8', (err, weapondata) => {
                       if (err) {
                           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
                           return;
                       }
                       if (weapondata !== "0") {
-                        writeDataToFile(String(1) + "\n" + String(-1),"weapon_to_equip.txt");
+                        writeDataToFile(String(1) + "\n" + String(-2),"weapon_to_equip.txt");
                         neuroClient.unregisterActions(['unequip_weapon']);
-                        neuroClient.sendActionResult(actionData.id, true, current_weapon + " has been un-equipped.");
+                        waiting_for_action_result = 1;
+                        actionresult_data = actionData;
                       } else {
                         neuroClient.unregisterActions(['unequip_weapon']);
-                        neuroClient.sendActionResult(actionData.id, false,  'You have no weapon to unequip!');
+                        setTimeout(() => {
+                          neuroClient.sendActionResult(actionData.id, false,  'You have no weapon to unequip!');
+                        }, 200);
                       }
                     });
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `Weapons cannot be unequipped while ${playername} has your interaction menu open.`);
-                  }
                   return;
                 }  
 
                 //initiates the aid consumption process
                 if (actionData.name === 'use_consumable') {
-                  if (inventoryopen == 0) {
                     readFile(neurovegaspath + "aid_names.txt", 'utf-8', (err, aiddata) => {
                       if (err) {
                           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -2164,98 +2497,27 @@ neuroClient.onAction(actionData => {
                         const selectedaid = actionData.params.consumable_select;
                         const aidindex = aiddata.findIndex(item => item.toLowerCase() === selectedaid.toLowerCase());
                         if (aidindex !== -1) {
-                          writeDataToFile(String(1) + "\n" + String(aidindex),"aid_to_use.txt");
-                          if (consumableMap[selectedaid] == "Food") {
-                            const foodResponses = [
-                              `You ate ${selectedaid}! Yummy!`,
-                              `You ate ${selectedaid}! Delicious!`,
-                              `You ate ${selectedaid}! Tasty!`,
-                              `You ate ${selectedaid}! Mmmmm, tastes good!`,
-                              `You ate ${selectedaid}! Tastes... meh...`,
-                              `You ate ${selectedaid}! Not bad!`
-                            ];
-                            const randomResponse = foodResponses[Math.floor(Math.random() * foodResponses.length)];
-                            neuroClient.sendActionResult(actionData.id, true, randomResponse);
-                          } else if (consumableMap[selectedaid] == "Drink") {
-                            if (selectedaid == "Irradiated water") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You feel well hydrated, but also a little queasy...");
-                            } else if (selectedaid == "Blood pack") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "It tastes like metal...");
-                            } else if (selectedaid == "Nightstalker squeezin's") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You feel sneakier...");
-                            } else if (selectedaid == "Dirty water") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "The taste isn't great, but you still feel hydrated.");
-                            } else if (selectedaid == "Purified water") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You feel well hydrated!");
-                            } else if (selectedaid == "Nuka-Cola" || selectedaid == "Nuka-Cola Quantum" || selectedaid == "Nuka-Cola Quartz" || selectedaid == "Nuka-Cola Victory") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You feel refreshed!");
-                            } else {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! ");
-                            }
-                          } else if (consumableMap[selectedaid] == "Alcohol") {
-                            neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You feel a little tipsy...");
-                          } else if (consumableMap[selectedaid] == "Chem") {
-                            if (selectedaid == "Stimpak" || selectedaid == "Super stimpak") {
-                              neuroClient.sendActionResult(actionData.id, true, "You injected a " + selectedaid + "! " + "You can feel your wounds beginning to heal!");
-                            } else if (selectedaid == "RadAway") {
-                              neuroClient.sendActionResult(actionData.id, true, "You consumed " + selectedaid + "! " + "You can feel the radiation leaving your body!");
-                            } else if (selectedaid == "Rad-X") {
-                              neuroClient.sendActionResult(actionData.id, true, "You consumed " + selectedaid + "! " + "You feel a little less vulnerable to radiation!");
-                            } else if (selectedaid == "Med-X") {
-                              neuroClient.sendActionResult(actionData.id, true, "You injected " + selectedaid + "! " + "You can feel your pain fading away! (+25 Damage Resistance for 4 minutes)");
-                            } else if (selectedaid == "Psycho") {
-                              neuroClient.sendActionResult(actionData.id, true, "You injected " + selectedaid + "! " + "You feel like you can take on the world! (+25% Damage for 4 minutes)");
-                            } else if (selectedaid == "Slasher") {
-                              neuroClient.sendActionResult(actionData.id, true, "You injected " + selectedaid + "! " + "You feel invincible! (+25% Damage and +25 Damage Resistance for 1 minute)");
-                            } else if (selectedaid == "Turbo") {
-                              neuroClient.sendActionResult(actionData.id, true, "You inhaled " + selectedaid + "! " + "Time feels like it's moving in slow motion...");
-                            } else if (selectedaid == "Fixer") {
-                              neuroClient.sendActionResult(actionData.id, true, "You took some " + selectedaid + "! You feel a little woozy."); 
-                            } else if (selectedaid == "Mentats") {
-                              neuroClient.sendActionResult(actionData.id, true, "You took some " + selectedaid + "! " + "You feel smarter! (+2 Intelligence, +2 Perception, and +1 Charisma for 4 minutes)");
-                            } else if (selectedaid == "Party Time Mentats") {
-                              neuroClient.sendActionResult(actionData.id, true, "You took some " + selectedaid + "! " + "You feel smarter and more charismatic! (+2 Intelligence, +2 Perception, and +5 Charisma for 1 minute)");
-                            } else if (selectedaid == "Jet" || selectedaid == "Dixon's Jet") {
-                              neuroClient.sendActionResult(actionData.id, true, "You inhaled " + selectedaid + "! " + "Ohhh yeah, that feels good!");
-                            } else if (selectedaid == "Ultrajet") {
-                              neuroClient.sendActionResult(actionData.id, true, "You inhaled " + selectedaid + "! " + "Ohhh yeah, that feels really good!");
-                            } else if (selectedaid == "Buffout") {
-                              neuroClient.sendActionResult(actionData.id, true, "You took some " + selectedaid + "! " + "You can feel your body getting stronger! (+2 Strength, +3 Endurance, and +60 max HP for 4 minutes)");
-                            } else if (selectedaid == "Doctor's bag" || selectedaid == "Medical supplies") {
-                              neuroClient.sendActionResult(actionData.id, true, "You used " + selectedaid + "! " + "Your limbs have never felt better! (All limb damage repaired)");
-                            } else if (selectedaid == "Steady") {
-                              neuroClient.sendActionResult(actionData.id, true, "You inhaled " + selectedaid + "! " + "You can feel your hands begin to relax. (Weapon spread has been reduced for 1 minute)");
-                            } else if (selectedaid == "Antivenom" || selectedaid == "Datura antivenom") {
-                              neuroClient.sendActionResult(actionData.id, true, "You drank some " + selectedaid + "! " + "Any and all poison effects have been cured!"); 
-                            } else {
-                              neuroClient.sendActionResult(actionData.id, true, "You used " + selectedaid + "! "); 
-                            }
-                          } else if (consumableMap[selectedaid] == "Poison") {
-                            neuroClient.sendActionResult(actionData.id, true, "You drank " + selectedaid + "! " + "You begin to feel very sick...");
-                          } else if (selectedaid == "Weapon repair kit"){
-                            neuroClient.sendActionResult(actionData.id, true, "You used " + selectedaid + "! " + "Your weapon's condition has been improved!");
-                          } else if (selectedaid == "Stealth Boy"){
-                            neuroClient.sendActionResult(actionData.id, true, "You used " + selectedaid + "! " + "You have turned invisible for 2 minutes!");
-                          } else {
-                            neuroClient.sendActionResult(actionData.id, true, "You used " + selectedaid + "!");
-                          }
+                          writeDataToFile(String(1) + "\n" + selectedaid,"aid_to_use.txt");
+                          waiting_for_action_result = 1;
+                          actionresult_data = actionData;
+                          consumable_to_use = selectedaid;
                         } else {
-                          neuroClient.sendActionResult(actionData.id, false, selectedaid + ' is not a valid consumable!');
+                          setTimeout(() => {
+                            neuroClient.sendActionResult(actionData.id, false, selectedaid + ' is not a valid consumable!');
+                          }, 200);
                         }
                       } else {
                         neuroClient.unregisterActions(['use_consumable']);
-                        neuroClient.sendActionResult(actionData.id, false,  'There are no consumable items in your inventory to use!');
+                        setTimeout(() => {
+                          neuroClient.sendActionResult(actionData.id, false,  'There are no consumable items in your inventory to use!');
+                        }, 200);
                       }
                     });
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `Consumables cannot be used while ${playername} has your interaction menu open.`);
-                  }
                   return;
                 }
 
                 //initiates the ammo switching process
                 if (actionData.name === 'switch_ammo') {
-                  if (inventoryopen == 0) {
                     readFile(neurovegaspath + "ammo_names.txt", 'utf-8', (err, ammodata) => {
                       if (err) {
                           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -2267,30 +2529,36 @@ neuroClient.onAction(actionData => {
                         const selectedammo = actionData.params.ammo_select;
                         const ammoindex = ammodata.findIndex(item => item.toLowerCase() === selectedammo.toLowerCase());
                         if (ammoindex !== -1) {
-                          writeDataToFile(String(1) + "\n" + String(ammoindex),"ammo_to_equip.txt");
+                          writeDataToFile(String(1) + "\n" + selectedammo,"ammo_to_equip.txt");
                           neuroClient.unregisterActions(['switch_ammo']);
-                          neuroClient.sendActionResult(actionData.id, true, 'Ammo type has been swapped to ' + selectedammo);
+                          waiting_for_action_result = 1;
+                          actionresult_data = actionData;
+                          ammo_to_equip = selectedammo;
                         } else {
-                          neuroClient.sendActionResult(actionData.id, false, selectedammo + ' is not a valid ammo type!');
+                          setTimeout(() => {
+                            neuroClient.sendActionResult(actionData.id, false, selectedammo + ' is not a valid ammo type!');
+                          }, 200);
                         }
                       } else {
                         neuroClient.unregisterActions(['switch_ammo']);
-                        neuroClient.sendActionResult(actionData.id, false, 'There are no alternate ammo types in your inventory to switch to!');
+                        setTimeout(() => {
+                          neuroClient.sendActionResult(actionData.id, false, 'There are no alternate ammo types in your inventory to switch to!');
+                        }, 200);
                       }
                     });
-                  } else {
-                    neuroClient.sendActionResult(actionData.id, false, `Ammunition type cannot be switched while ${playername} has your interaction menu open.`);
-                  }
                   return;
                 }
 
-                //makes neuro jump in-game (because why not)
+                //makes neuro jump in-game
                 if (actionData.name === 'jump') {
                   if (is_sitting == 0) {
                     writeDataToFile(String(1),"jump.txt");
-                    neuroClient.sendActionResult(actionData.id, true, "You have successfully jumped.");
+                    actionresult_data = actionData;
+                    waiting_for_action_result = 1;
                   } else {
-                    neuroClient.sendActionResult(actionData.id, false, "You cannot jump while sitting down.");
+                    setTimeout(() => {
+                      neuroClient.sendActionResult(actionData.id, false, "You cannot jump while sitting down.");
+                    }, 200);
                   }
                   return;
                 }  
@@ -2298,59 +2566,85 @@ neuroClient.onAction(actionData => {
                 if (actionData.name === 'save_game') {
                   if (is_in_combat == 0) {
                     writeDataToFile(String(1),"savegame.txt");
-                    neuroClient.sendActionResult(actionData.id, true, "Game has been saved!");
+                    actionresult_data = actionData;
+                    waiting_for_action_result = 1;
                   } else {
-                    neuroClient.sendActionResult(actionData.id, false, "You cannot save while in combat!");
+                    setTimeout(() => {
+                      neuroClient.sendActionResult(actionData.id, false, "You cannot save while in combat!");
+                    }, 200);
                   }
                   return;
                 }
 
               } else {
                 if (weapon_action_force == 1) {
-                  neuroClient.sendActionResult(actionData.id, true, `Error! You cannot perform actions while ${playername} is dead! Please wait for a previous save to be loaded.`)
+                  setTimeout(() => {
+                    neuroClient.sendActionResult(actionData.id, true, `Error! You cannot perform actions while ${playername} is dead! Please wait for a previous save to be loaded.`)
+                  }, 200);
                   weapon_action_force = 0;
                   writeDataToFile("0","weaponforce.txt");
                 } else if(weapon_action_force == 0) {
-                  neuroClient.sendActionResult(actionData.id, false, `You cannot perform actions while ${playername} is dead! Please wait for a previous save to be loaded.`)
+                  setTimeout(() => {
+                    neuroClient.sendActionResult(actionData.id, false, `You cannot perform actions while ${playername} is dead! Please wait for a previous save to be loaded.`)
+                  });
                 }
                 return;
               }
             } else {
               if (weapon_action_force == 1) {
-                neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while unconscious.')
-                weapon_action_force = 0;
+                setTimeout(() => {
+                  neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while unconscious.')
+                }, 200);
                 writeDataToFile("0","weaponforce.txt");
               } else if(weapon_action_force == 0) {
-                neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while unconscious.')
+                setTimeout(() => {
+                  neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while unconscious.')
+                }, 200);
               }
               return;
             }
           } else {
             if (weapon_action_force == 1) {
-              neuroClient.sendActionResult(actionData.id, true, `Error! You cannot perform actions ${playername} is in dialogue.`)
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, true, `Error! You cannot perform this action while ${playername} is in a conversation.`)
+              }, 200);
               weapon_action_force = 0;
               writeDataToFile("0","weaponforce.txt");
             } else if(weapon_action_force == 0) {
-              neuroClient.sendActionResult(actionData.id, false, `You cannot perform actions while ${playername} is in dialogue.`)
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, false, `You cannot perform this action while ${playername} is in a conversation.`)
+              }, 200);
             }
             return;
           }
         } else {
           if (weapon_action_force == 0) {
             if (gamestate == 0) {
-              neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while on the main menu. Please wait for the game to start.')
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while on the main menu. Please wait for the game to start.')
+              }, 200);
             } else if (gamestate == 2) {
-              neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions during a loading screen.')
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions during a loading screen.')
+              }, 200);
             } else if (gamestate == -1) {
-              neuroClient.sendActionResult(actionData.id, false, "You cannot perform actions while the game isn't running.")
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, false, "You cannot perform actions while the game isn't running.")
+              }, 200);
             }
           } else if (weapon_action_force == 1) {
             if (gamestate == 0) {
-              neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while on the main menu. Please wait for the game to start.')
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while on the main menu. Please wait for the game to start.')
+              }, 200);
             } else if (gamestate == 2) {
-              neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions during a loading screen.')
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions during a loading screen.')
+              }, 200);
             } else if (gamestate == -1) {
-              neuroClient.sendActionResult(actionData.id, true, "Error! You cannot perform actions while the game isn't running.")
+              setTimeout(() => {
+                neuroClient.sendActionResult(actionData.id, true, "Error! You cannot perform actions while the game isn't running.")
+              }, 200);
             }
             weapon_action_force = 0;
             writeDataToFile("0","weaponforce.txt");
@@ -2359,9 +2653,13 @@ neuroClient.onAction(actionData => {
         }
       } else {
         if (weapon_action_force == 0) {
-          neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while the game is paused! Please wait for the game to resume.')
+          setTimeout(() => {
+            neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions while the game is paused! Please wait for the game to resume.')
+          }, 200);
         } else if (weapon_action_force == 1) {
-          neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while the game is paused! Please wait for the game to resume.')
+          setTimeout(() => {
+            neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions while the game is paused! Please wait for the game to resume.')
+          }, 200);
           weapon_action_force = 0;
           writeDataToFile("0","weaponforce.txt");
         }
@@ -2369,16 +2667,32 @@ neuroClient.onAction(actionData => {
       }
     } else {
       if (weapon_action_force == 0) {
-        neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions during a cutscene!')
+        setTimeout(() => {
+          neuroClient.sendActionResult(actionData.id, false, 'You cannot perform actions during a cutscene!')
+        }, 200);
       } else if (weapon_action_force == 1) {
-        neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions during a cutscene!')
+        setTimeout(() => {
+          neuroClient.sendActionResult(actionData.id, true, 'Error! You cannot perform actions during a cutscene!')
+        }, 200);
         weapon_action_force = 0;
         writeDataToFile("0","weaponforce.txt");
       }
       return;
     }
-
-  neuroClient.sendActionResult(actionData.id, false, 'Unknown action.')
+    setTimeout(() => {
+      neuroClient.sendActionResult(actionData.id, false, 'Unknown action.')
+    }, 200);
     });
 });
 })
+
+function onProgramExit() {
+  neuroClient.unregisterActions([
+    'equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 
+    'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 
+    'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 
+    'check_inventory', 'save_game', 'check_health_status', 'check_inventory'
+  ]);
+}
+
+process.on('exit', onProgramExit);

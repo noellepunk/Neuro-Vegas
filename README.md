@@ -30,8 +30,6 @@ All of the expansion [DLCs](https://store.steampowered.com/sub/13435/) for Fallo
 
 [AnhNVSE](https://www.nexusmods.com/newvegas/mods/74012)
 
-[Human Collision Sounds Removed](https://www.nexusmods.com/newvegas/mods/62876) (Optional, but highly recommended)
-
 If you are attempting to install this mod on a fresh installation of New Vegas, I highly recommend using the vanilla portion of [Viva New Vegas](https://vivanewvegas.moddinglinked.com/) as your base for maximum stability and minimal issues.
 
 
@@ -57,19 +55,20 @@ Actions that Neuro can perform:
 - Stop/resume following the player
 - Jump (because why not)
 
-Neuro is prevented from performing actions whenever:
+Due to how NPC scripts work in the game engine, if Neuro performs an action while the player is in a menu (i.e pipboy/neuro's interaction menu), an action result will not be sent until the player exits the menu.
+
+Neuro is prevented from performing certain actions whenever:
 - The player is on the main menu
 - The game is paused
 - The player is dead
 - Neuro is unsconscious
 - The player is currently in dialogue with another NPC
-- Neuro's interaction menu is open (only prevents item/inventory actions)
 - The player is currently watching a cutscene (ending slide/DLC intro)
 
 
 Neuro is also given context on:
 - Whenever the player is on the main menu
-- Whenever a save is first loaded (includes context on current location and the status of her character, will not be sent if any saves are loaded afterwards)
+- Whenever a save is first loaded (includes current location and the status of her character, will not be sent if any saves are loaded afterwards)
 - NPC Dialogue and player responses (only includes dialogue that puts the player into the dialogue menu)
 - Whenever the current quest/quest objectives change
 - Whenever the current active quest is failed/completed
@@ -79,6 +78,7 @@ Neuro is also given context on:
 - Whenever combat ends
 - Whenever her health reaches 0 and she gets knocked unconscious
 - Whenever she regains consciousness/the player revives her
+- Whenever the player levels up
 - Whenever the player heals her
 - Whenever the player forces her to stop/resume following
 - Whenever the player dies (sends a simplified version of the startup context when a save is loaded afterwards)
@@ -99,7 +99,6 @@ This mod is not entirely perfect and there are some issues that I haven't been a
 - Sometimes player kill context will fail to send, most commonly occurs when an enemy is killed from far away or a group of enemies are bunched up close together
 - Sometimes dialogue context will fail to send, most commonly occurs when an actor is talking through an object (i.e radio or intercom), but otherwise it is *somewhat* rare
 - Sometimes dialogue context will be incorrect, most commonly occurs when purchasing something from a vendor
-- Sometimes the Neuro NPC will emit ragdoll collision sounds whenever it is nearby an object, I have no idea what causes this and its why I highly recommend downloading the [Human Collision Sounds Removed](https://www.nexusmods.com/newvegas/mods/62876) mod
 - Due to how bright Neuro's textures are, she will start glowing like crazy whenever she is directly facing the sun, this can technically be fixed by disabling HDR in the game's preferences file but this also makes the game look significally worse so I personally recommend against it
 - If Neuro Integration is enabled, whenever Neuro has a throwable weapon equipped, she will never run out during combat (It is kinda funny to watch Neuro endlessly lob grenades at an enemy with no regard for anyone's safety so I consider this to be more of a feature)
 - I also recommend keeping save-scumming to a minimum, as it may confuse Neuro if she is sent context about a quest shes already completed or an enemy shes already killed
