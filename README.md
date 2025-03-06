@@ -7,13 +7,13 @@ Before you try reporting any issues with the mod, please ensure that you followe
 
 ![Screenshot1](/screenshots/screenie1.png?raw=true)
 
-![Screenshot2](/screenshots/screenie2.png?raw=true)
+![Screenshot2](/screenshots/screenie6.png?raw=true)
 
 ![Screenshot3](/screenshots/screenie3.png?raw=true)
 
 ![Screenshot4](/screenshots/screenie4.png?raw=true)
 
-![Screenshot5](/screenshots/screenie5.png?raw=true)
+![Screenshot5](/screenshots/screenie7.png?raw=true)
 
 # Installation
 This mod REQUIRES:
