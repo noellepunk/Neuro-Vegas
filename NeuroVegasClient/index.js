@@ -32,12 +32,16 @@ function checkGameRunning() {
   isProgramRunning('FalloutNV').then(isRunningNow => {
     if (isRunningNow) {
       if (!isRunning) {
+        player_was_dead = 0;
+        playerdead = 0;
         isRunning = true;
         console.log('[NeuroVegas] New Vegas is running.');
       }
     } else {
       if (isRunning) {
         isRunning = false;
+        player_was_dead = 0;
+        playerdead = 0;
         console.log('[NeuroVegas] New Vegas is not running.');
         writeDataToFile("-1","gamestate.txt" );
         writeDataToFile("-1","level.txt" );
@@ -48,10 +52,11 @@ function checkGameRunning() {
         questobjs = "0";
         if (startupcontextsent == 1) {
           neuroClient.sendContext("Fallout: New Vegas has been closed, please wait for the game to re-open.",true);
+          console.log('[NeuroVegas] New Vegas was closed, all actions have been unregistered.');
         }
         startupcontextsent = 0;
         ResetData();
-        neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'check_inventory', 'save_game','check_health_status','check_inventory']);
+        neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'switch_to_passive_mode', 'switch_to_aggressive_mode', 'check_inventory', 'save_game','check_health_status','check_inventory']);
         if (waiting_for_action_result == 1) {
           waiting_for_action_result = 0;
           if (weapon_action_force ==  1) {
@@ -182,6 +187,7 @@ let inventoryopen = 0;
 let is_paused = 0;
 
 let playerdead = 0;
+let player_was_dead = 0;
 
 let dialogueresponse = "";
 
@@ -381,7 +387,7 @@ writeDataToFile("0","weaponforce.txt");
 writeDataToFile("0","ammoforce.txt");
 writeDataToFile("0","aidforce.txt");
 
-console.log(`[NeuroVegas] Startup Data Initalized at : ${neurovegaspath}`);
+console.log(`[NeuroVegas] Data Files Initalized at : ${neurovegaspath}`);
 
 
 //#region Actions
@@ -455,19 +461,19 @@ const checkhealthstatus = {
   schema: {},
 }
 
-const set_combat_mode_to_defensive = {
-  name: 'set_combat_mode_to_defensive',
-  description: "Switches your combat mode from Offensive to Defensive. When in Defensive mode, you will only initiate combat in self-defense.",
+let switch_to_passive_mode = {
+  name: 'switch_to_passive_mode',
+  description: "Switches from Aggressive mode to Passive mode. When in Passive mode, you will wait for the player to attack first.",
   schema: {},
 }
 
-const set_combat_mode_to_offensive = {
-  name: 'set_combat_mode_to_offensive',
-  description: "Switches your combat mode from Defensive to Offensive. When in Offensive mode, you will attack all hostiles on sight.",
+const switch_to_aggressive_mode = {
+  name: 'switch_to_aggressive_mode',
+  description: "Switches from Passive mode to Aggressive mode. When in Aggressive mode, you will attack all hostiles on sight.",
   schema: {},
 }
 
-
+/*
 const fleefromcombat = {
   name: 'flee_from_combat',
   description: 'When in combat, allows you to flee from the enemy. Useful if you think you are outmatched.',
@@ -478,15 +484,15 @@ const stopfleeing = {
   name: 'stop_fleeing',
   description: 'After fleeing from combat, allows you to stop fleeing and resume fighting.',
   schema: {},
-}
+}*/
 
-const stopfollowing = {
+let stopfollowing = {
   name: 'stop_following',
   description: 'Allows you to stop following the player and remain in place at your current position.',
   schema: {},
 }
 
-const resumefollowing = {
+let resumefollowing = {
   name: 'resume_following',
   description: 'Allows you to resume following the player after you have stopped following.',
   schema: {},
@@ -889,7 +895,7 @@ if (waiting_for_action_result == 1) {
       if (stopfollowresultdata !== "") {
         if (stopfollowresultdata == "1") {
           writeDataToFile("0","stopfollowresult.txt");
-          neuroClient.sendActionResult(actionresult_data.id, true, "You have stopped following the player.");
+          neuroClient.sendActionResult(actionresult_data.id, true, `You have stopped following ${playername}.`);
           waiting_for_action_result = 0;
         }
       }
@@ -903,12 +909,12 @@ if (waiting_for_action_result == 1) {
       if (resumefollowresultdata !== "") {
         if (resumefollowresultdata == "1") {
           writeDataToFile("0","resumefollowresult.txt");
-          neuroClient.sendActionResult(actionresult_data.id, true, "You have resumed following the player.");
+          neuroClient.sendActionResult(actionresult_data.id, true, `You have resumed following ${playername}.`);
           waiting_for_action_result = 0;
         }
       }
     });
-  } else if (actionresult_data.name == "set_combat_mode_to_defensive") {
+  } else if (actionresult_data.name == "switch_to_passive_mode") {
     readFile(setdefensiveresultFilePath, 'utf-8', (err, setdefensiveresultdata) => {
       if (err) {
         console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -917,12 +923,12 @@ if (waiting_for_action_result == 1) {
       if (setdefensiveresultdata !== "") {
         if (setdefensiveresultdata == "1") {
           writeDataToFile("0","setdefensiveresult.txt");
-          neuroClient.sendActionResult(actionresult_data.id, true, 'Combat mode set to: "Defensive", you will now only initiate combat in self-defense.');
+          neuroClient.sendActionResult(actionresult_data.id, true, 'You have switched to Passive mode, you will now wait for the player to attack first before entering combat.');
           waiting_for_action_result = 0;
         }
       }
     });
-  } else if (actionresult_data.name == "set_combat_mode_to_offensive") {
+  } else if (actionresult_data.name == "switch_to_aggressive_mode") {
     readFile(setoffensiveresultFilePath, 'utf-8', (err, setoffensiveresultdata) => {
       if (err) {
         console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -931,7 +937,7 @@ if (waiting_for_action_result == 1) {
       if (setoffensiveresultdata !== "") {
         if (setoffensiveresultdata == "1") {
           writeDataToFile("0","setoffensiveresult.txt");
-          neuroClient.sendActionResult(actionresult_data.id, true, 'Combat mode set to: "Offensive", enemies will now be attacked on sight.');
+          neuroClient.sendActionResult(actionresult_data.id, true, 'You have switched to Aggressive mode, you will now attack all enemies on sight.');
           waiting_for_action_result = 0;
         }
       }
@@ -980,6 +986,11 @@ if (waiting_for_action_result == 1) {
     //2 = loading
     //#region Startup Context
     //update game state
+    isProgramRunning('FalloutNV').then(isRunningNow => {
+    
+    if (isRunningNow == true) {
+
+
     readFile(gamestateFilePath, 'utf-8', (err, gamestatedata) => {
       if (err) {
           console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -999,6 +1010,24 @@ if (waiting_for_action_result == 1) {
 
             if (playerdata !== playername && playerdata !== "") {
                 playername = playerdata;
+
+                switch_to_passive_mode = {
+                  name: 'switch_to_passive_mode',
+                  description: `Switches from Aggressive mode to Passive mode. When in Passive mode, you will wait for ${playername} to attack first.`,
+                  schema: {},
+                }
+                
+                stopfollowing = {
+                  name: 'stop_following',
+                  description: `Allows you to stop following ${playername} and remain in place at your current position.`,
+                  schema: {},
+                }
+                
+                resumefollowing = {
+                  name: 'resume_following',
+                  description: `Allows you to resume following ${playername} after you have stopped following.`,
+                  schema: {},
+                }
             }
             
               //update location
@@ -1019,7 +1048,7 @@ if (waiting_for_action_result == 1) {
                         let daytime = "AM";
                         let decimaltime = Number(locationdata[2]);
                         let hour = Math.floor(decimaltime);
-                        let minute = Math.round((decimaltime - hour) * 60);
+                        let minute = Math.floor((decimaltime - hour) * 60);
         
                         if (hour > 12) {
                           hour = hour - 12;
@@ -1033,7 +1062,11 @@ if (waiting_for_action_result == 1) {
                         let time = "";
 
                         if (minute < 10) {
+                          if (hour === 0) {
+                            time = `12:0${minute} ${daytime}`;
+                          } else {
                             time = `${hour}:0${minute} ${daytime}`;
+                          }
                         } else {
                           if (hour == 0) {
                             time = `12:${minute} ${daytime}`;
@@ -1124,7 +1157,8 @@ if (waiting_for_action_result == 1) {
                               if (gamestate == 0) {
                                 writeDataToFile("1","limbcheck.txt");
                                 neuroClient.sendContext("You are currently on the main menu, please wait for the game to start.",true);
-                                neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'save_game','check_health_status','check_inventory']);
+                                console.log('[NeuroVegas] Player is currently on the main menu.');
+                                neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'switch_to_passive_mode', 'switch_to_aggressive_mode', 'save_game','check_health_status','check_inventory']);
                                 ResetData();
                                 equippable_weapons = "";
                                 equippable_aid = "";
@@ -1170,6 +1204,24 @@ if (waiting_for_action_result == 1) {
               console.log(`[NeuroVegas] Player name registered: ${playerdata}`);
 
               playername = playerdata;
+
+              switch_to_passive_mode = {
+                name: 'switch_to_passive_mode',
+                description: `Switches from Aggressive mode to Passive mode. When in Passive mode, you will wait for ${playername} to attack first.`,
+                schema: {},
+              }
+              
+              stopfollowing = {
+                name: 'stop_following',
+                description: `Allows you to stop following ${playername} and remain in place at your current position.`,
+                schema: {},
+              }
+              
+              resumefollowing = {
+                name: 'resume_following',
+                description: `Allows you to resume following ${playername} after you have stopped following.`,
+                schema: {},
+              }
           }
         });
         //#endregion
@@ -1187,16 +1239,18 @@ if (waiting_for_action_result == 1) {
             if (playerdeaddata.length > 1) {
                 if (Number(playerdeaddata[0] == 1) && playerdead == 0) {
                   playerdead = 1;
-                  neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'save_game','check_health_status','check_inventory']);
+                  player_was_dead = 1;
+                  neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'switch_to_passive_mode', 'switch_to_aggressive_mode', 'save_game','check_health_status','check_inventory']);
                   ResetData();
                   if (playerdeaddata[1] == "0") { 
                     neuroClient.sendContext(`${playername} has died! Please wait for a previous save file to be loaded.`);
                   } else {
                     if (playerdeaddata[1] == "Neuro-Sama" || playerdeaddata[1] == "Evil Neuro") { 
-                      neuroClient.sendContext(`Oops! You accidentally killed ${playername}! Please wait for a previous save file to be loaded.`);
+                      neuroClient.sendContext(`You've accidentally killed ${playername}! Please wait for a previous save file to be loaded.`);
                     } else {
                       neuroClient.sendContext(`${playername} was killed by ${playerdeaddata[1]}! Please wait for a previous save file to be loaded.`);
                     }
+                    console.log(`[NeuroVegas] Player has died!`);
                   }
                 } else if (Number(playerdeaddata[0] == 0) && playerdead == 1) {
                   playerdead = 0;
@@ -1209,6 +1263,24 @@ if (waiting_for_action_result == 1) {
         
                     if (playerdata !== playername && playerdata !== "") {
                         playername = playerdata;
+
+                        switch_to_passive_mode = {
+                          name: 'switch_to_passive_mode',
+                          description: `Switches from Aggressive mode to Passive mode. When in Passive mode, you will wait for ${playername} to attack first.`,
+                          schema: {},
+                        }
+                        
+                        stopfollowing = {
+                          name: 'stop_following',
+                          description: `Allows you to stop following ${playername} and remain in place at your current position.`,
+                          schema: {},
+                        }
+                        
+                        resumefollowing = {
+                          name: 'resume_following',
+                          description: `Allows you to resume following ${playername} after you have stopped following.`,
+                          schema: {},
+                        }
                     }
                     
                 //update location
@@ -1227,7 +1299,7 @@ if (waiting_for_action_result == 1) {
                           let daytime = "AM";
                           let decimaltime = Number(locationdata[2]);
                           let hour = Math.floor(decimaltime);
-                          let minute = Math.round((decimaltime - hour) * 60);
+                          let minute = Math.floor((decimaltime - hour) * 60);
           
                           if (hour > 12) {
                             hour = hour - 12;
@@ -1241,7 +1313,11 @@ if (waiting_for_action_result == 1) {
                           let time = "";
 
                           if (minute < 10) {
-                            time = `${hour}:0${minute} ${daytime}`;
+                            if (hour === 0) {
+                              time = `12:0${minute} ${daytime}`;
+                            } else {
+                              time = `${hour}:0${minute} ${daytime}`;
+                            }
                         } else {
                           if (hour == 0) {
                             time = `12:${minute} ${daytime}`;
@@ -1326,7 +1402,7 @@ if (waiting_for_action_result == 1) {
         
                                       let startupstring = `A previous save has been loaded! \n` + locationstring + levelstring + healthstring + weaponstring + combat_mode_string;
       
-                                        neuroClient.sendContext(startupstring,true);
+                                      neuroClient.sendContext(startupstring,true);
                                       currentquest = "0";
                                       questobjs = "0";
                                       ResetData();
@@ -1335,6 +1411,8 @@ if (waiting_for_action_result == 1) {
                                       equippable_ammo = "";
                                       currentquest = "";
                                       is_in_combat = 0;
+                                      is_unconscious = 0;
+                                      player_was_dead = 1;
                                       writeDataToFile("1","limbcheck.txt");
                                       neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
                                     });
@@ -1400,10 +1478,12 @@ if (waiting_for_action_result == 1) {
 
                   if (dialogueresponse != "" && dialogueresponse != "0" && dialogueresponse != "null") {
                     neuroClient.sendContext(playername+ ": " + dialogueresponse + "\n"+ dialoguespeaker + ": " + dialogue_string);
+                    console.log(`[NeuroVegas] Dialogue context sent:\n` + playername+ ": " + dialogueresponse + "\n"+ dialoguespeaker + ": " + dialogue_string);
                     writeDataToFile("0","dialogueresponse.txt");
                     dialogue_string = "";
                   } else {
                     neuroClient.sendContext(dialoguespeaker + ": " + dialogue_string);
+                    console.log(`[NeuroVegas] Dialogue context sent:\n` + dialoguespeaker + ": " + dialogue_string);
                     writeDataToFile("0","dialogueresponse.txt");
                     dialogue_string = "";
                   }
@@ -1434,7 +1514,7 @@ if (waiting_for_action_result == 1) {
                   let daytime = "AM";
                   let decimaltime = Number(locationdata[2]);
                   let hour = Math.floor(decimaltime);
-                  let minute = Math.round((decimaltime - hour) * 60);
+                  let minute = Math.floor((decimaltime - hour) * 60);
 
                   if (hour > 12) {
                     hour = hour - 12;
@@ -1448,9 +1528,13 @@ if (waiting_for_action_result == 1) {
                   let time = "";
 
                         if (minute < 10) {
-                            time = `${hour}:0${minute} ${daytime}`;
+                            if (hour === 0) {
+                              time = `12:0${minute} ${daytime}`;
+                            } else {
+                              time = `${hour}:0${minute} ${daytime}`;
+                            }
                         } else {
-                          if (hour == 0) {
+                          if (hour === 0) {
                             time = `12:${minute} ${daytime}`;
                           } else {
                             time = `${hour}:${minute} ${daytime}`;
@@ -1464,8 +1548,10 @@ if (waiting_for_action_result == 1) {
                   if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blue Narration" && currentlocation != "Slide Show Theatre Room") {
                     if (indoors == 0) {
                       neuroClient.sendContext(`Current location is now: ${currentlocation} (Outdoors)\nCurrent time is: ${time}`,true);
+                      console.log(`[NeuroVegas] Location context sent:\n` + `Current location is now: ${currentlocation} (Outdoors)\nCurrent time is: ${time}`);
                     } else if (indoors == 1) {
                       neuroClient.sendContext(`Current location is now: ${currentlocation} (Indoors)\nCurrent time is: ${time}`,true);
+                      console.log(`[NeuroVegas] Location context sent:\n` + `Current location is now: ${currentlocation} (Indoors)\nCurrent time is: ${time}`);
                     }
                   }
               }
@@ -1529,14 +1615,16 @@ if (waiting_for_action_result == 1) {
 
                     if (is_unconscious == 0 && revivedata == "0") {
                       //send a damage warning when neuro's health is below 40%
-                      if (currenthealth/maxhealth < 0.40) {
-                        if (half_dmgwarning == 0) {
-                          neuroClient.sendContext(`Damage Warning!\n Health is at: ${currenthealth}/${maxhealth}`);
-                          half_dmgwarning = 1;
+                      if (currenthealth > 0) {
+                        if (currenthealth/maxhealth < 0.40) {
+                          if (half_dmgwarning == 0) {
+                            neuroClient.sendContext(`Damage Warning!\n Health is at: ${currenthealth}/${maxhealth}`);
+                            half_dmgwarning = 1;
+                          }
+                        //reset damage warning once neuro has recovered health
+                        } else if ( currenthealth/maxhealth > 0.40 && half_dmgwarning == 1) {
+                          half_dmgwarning = 0;
                         }
-                      //reset damage warning once neuro has recovered health
-                      } else if ( currenthealth/maxhealth > 0.40 && half_dmgwarning == 1) {
-                        half_dmgwarning = 0;
                       }
                     }
                 }
@@ -1559,17 +1647,25 @@ if (waiting_for_action_result == 1) {
                           neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                         }
                       }
+                      console.log(`[NeuroVegas] Neuro has been knocked unconscious!`);
                       is_unconscious = 1;
                       disable_writing = 1;
                       equippable_weapons = "";
                       equippable_aid = "";
                       equippable_ammo = "";
                       ResetDataKnocked();
-                      neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 'check_inventory', 'save_game','check_health_status']);
+                      neuroClient.unregisterActions(['equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 'resume_following', 'jump', 'switch_to_passive_mode', 'switch_to_aggressive_mode', 'check_inventory', 'save_game','check_health_status']);
                     }else if (Number(unconsciousdata[0]) == 0 && is_unconscious == 1) {
-                      setTimeout(() => {    
-                        neuroClient.sendContext(`You've recovered consciousness!\nHealth is at: ${currenthealth}/${maxhealth}`);
-                      }, 250);
+                      if (player_was_dead == 0) {
+                        setTimeout(() => {    
+                          neuroClient.sendContext(`You've recovered consciousness!\nHealth is at: ${currenthealth}/${maxhealth}`);
+                        }, 250);
+                      } else {
+                        setTimeout(() => {
+                          player_was_dead = 0;
+                        }, 1000);
+                      }
+                      console.log(`[NeuroVegas] Neuro has recovered consciousness! Health is at: ${currenthealth}/${maxhealth}`);
                       neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
                       ResetDataKnocked();
                       disable_writing = 0;
@@ -1586,6 +1682,7 @@ if (waiting_for_action_result == 1) {
                         neuroClient.sendContext(`Your health has reached 0 and you were knocked unconscious!\nPlease wait for ${playername} to revive you or until you regain consciousness.`);
                       }
                     }
+                    console.log(`[NeuroVegas] Neuro has been knocked unconscious!`);
                     is_unconscious = 1;
                     equippable_weapons = "";
                     equippable_aid = "";
@@ -1596,6 +1693,7 @@ if (waiting_for_action_result == 1) {
                       setTimeout(() => {    
                         neuroClient.sendContext(`${playername} has revived you!\nHealth is at: ${currenthealth}/${maxhealth}`);
                       }, 250);
+                      console.log(`[NeuroVegas] Neuro has been revived by ${playername}! Health is at: ${currenthealth}/${maxhealth}`);
                       writeDataToFile("0","revived.txt");
                       neuroClient.registerActions([save_game,checkhealthstatus,checkinventory,jump]);
                       ResetDataKnocked();
@@ -1608,11 +1706,8 @@ if (waiting_for_action_result == 1) {
               healdata = parseMultiLineString(healdata);
               if (healdata.length > 1 && is_unconscious == 0) {
                 if (healdata[0] == "1") {
-                  if (headhealth != 0 && torsohealth != 0 && leftarmhealth != 0 && rightarmhealth != 0 && leftleghealth != 0 && rightleghealth != 0) {
-                    neuroClient.sendContext(`${playername} healed your for ${healdata[1]} hit points!\nHealth is now at: ${currenthealth}/${maxhealth}`);
-                  } else {
-                    neuroClient.sendContext(`${playername} healed your for ${healdata[1]} hit points!\nHealth is now at: ${currenthealth}/${maxhealth}\nAll limbs have been healed!`);
-                  }
+                  neuroClient.sendContext(`${playername} healed you for ${healdata[1]} hit points!\nHealth is now at: ${currenthealth}/${maxhealth}`);
+                  console.log(`[NeuroVegas] Neuro was healed by ${playername}! Health is now at: ${currenthealth}/${maxhealth}`);
                   writeDataToFile("0","heal.txt");
                 }
               }
@@ -1627,6 +1722,7 @@ if (waiting_for_action_result == 1) {
                     if (levelupdata > currentlevel) {
                       currentlevel = levelupdata;
                       neuroClient.sendContext(`You and ${playername} have leveled up to level ${currentlevel}!`);
+                      console.log(`[NeuroVegas] Neuro and ${playername} have leveled up to level ${currentlevel}!`);
                     }
                   }
                 }
@@ -1868,11 +1964,13 @@ if (waiting_for_action_result == 1) {
                               const available_weps_array = parseMultiLineString(available_weps);
                               const weapons_string = available_weps_array.join(', ');
                               neuroClient.forceActions(`${current_equipped_weapon} is out of ammo! Please choose another weapon from your inventory to equip.`,['equip_weapon'],'Available Weapons: ' + weapons_string,false);
+                              console.log(`[NeuroVegas] Neuro's weapon is out of ammo and was unequipped, an action force to equip a new weapon has been sent!`);
                               weapon_action_force = 1;
                               writeDataToFile("1","weaponforce.txt");
                             }
                           } else {
                             neuroClient.sendContext(`${current_equipped_weapon} is out of ammo and has been unequipped!`);
+                            console.log(`[NeuroVegas] Neuro's weapon is out of ammo and was unequipped!`);
                           }
                             
                           writeDataToFile("0","outofammo.txt");
@@ -1907,9 +2005,11 @@ if (waiting_for_action_result == 1) {
                           is_sitting = 1;
                           neuroClient.unregisterActions(['stop_following','resume_following','jump']);
                           neuroClient.sendContext(`You and ${playername} have found a nice place to sit down.`);
+                          console.log(`[NeuroVegas] Neuro and ${playername} have sat down.`);
                         } else if (Number(sittingdata) == 0 && is_sitting == 1) {
                           is_sitting = 0;
                           neuroClient.sendContext(`You and ${playername} have gotten up from your seats.`);
+                          console.log(`[NeuroVegas] Neuro and ${playername} have gotten up from their seats.`);
                           neuroClient.registerActions([jump]);
                         }
                       }
@@ -1923,6 +2023,7 @@ if (waiting_for_action_result == 1) {
                                 neuroClient.registerActions([stopfollowing]);
                                 if (forcefollow == "1") {
                                   neuroClient.sendContext(`${playername} has forced you to resume following.`);
+                                  console.log(`[NeuroVegas] Neuro has been forced to resume following.`);
                                   writeDataToFile(String(0),"forcefollow.txt");
                                 }
                             } else if (behaviorstate == "1") {
@@ -1931,6 +2032,7 @@ if (waiting_for_action_result == 1) {
 
                               if (forcefollow == "1") {
                                   neuroClient.sendContext(`${playername} has forced you to stay put and stop following for now.`);
+                                  console.log(`[NeuroVegas] Neuro has been forced to stop following and wait.`);
                                   writeDataToFile(String(0),"forcefollow.txt");
                               }
                             } else if (behaviorstate == "2") {
@@ -1962,10 +2064,12 @@ if (waiting_for_action_result == 1) {
         //quest successfully completed
         if (queststatusdata == "1") {
           neuroClient.sendContext(`QUEST COMPLETED: ${currentquest}`);
+          console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST COMPLETED: ${currentquest}`);
           writeDataToFile("0", "queststatus.txt");
           //quest failed 
         } else if (queststatusdata == "2") {
           neuroClient.sendContext(`QUEST FAILED: ${currentquest}`);
+          console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST FAILED: ${currentquest}`);
           writeDataToFile("0", "queststatus.txt");
         }
 
@@ -1996,13 +2100,16 @@ if (waiting_for_action_result == 1) {
                 }
         
                 neuroClient.sendContext(contextString, true);
+                console.log(`[NeuroVegas] Quest context sent:\n` + contextString);
               } else {
                 neuroClient.sendContext(`Quest Updated!\nCurrent Quest: ${currentquest}\nQuest Objectives: No current objectives.`,true);
+                console.log(`[NeuroVegas] Quest context sent:\n` + `Quest Updated!\nCurrent Quest: ${currentquest}\nQuest Objectives: No current objectives.`);
                 questobjectives = [];
               }
             } else {
               if (playerdead == 0 && is_unconscious == 0) {
                 neuroClient.sendContext(`No current quests active.`, true);
+                console.log(`[NeuroVegas] Quest context sent:\n` + `No current quests active.`);
               }
               questobjectives = [];
             }
@@ -2033,11 +2140,11 @@ if (waiting_for_action_result == 1) {
     
         if (combatmodedata !== current_combatmode && combatmodedata !== "") {
             current_combatmode = combatmodedata;
-            neuroClient.unregisterActions(['set_combat_mode_to_defensive','set_combat_mode_to_offensive']);
+            neuroClient.unregisterActions(['switch_to_passive_mode','switch_to_aggressive_mode']);
             if (current_combatmode == "0") {
-                neuroClient.registerActions([set_combat_mode_to_defensive]);
+                neuroClient.registerActions([switch_to_passive_mode]);
             } else if (current_combatmode == "1") {
-              neuroClient.registerActions([set_combat_mode_to_offensive]);
+              neuroClient.registerActions([switch_to_aggressive_mode]);
             }
         }
       });
@@ -2100,23 +2207,22 @@ if (waiting_for_action_result == 1) {
                         if (kill[3] == "Neuro-sama" || kill[3] == "Evil Neuro") {
                           if (kill[1] == "0") {
                             neuroClient.sendContext(`You killed ${kill[0]} with your bare fists.`);
+                            console.log(`[NeuroVegas] Neuro killed ${kill[0]} with her bare fists.`);
                           } else {
                             if (Number(totalammodata) != -1 && Number(totalammodata) != 0) {
                               neuroClient.sendContext(`You killed ${kill[0]} with ${kill[1]}.\nAmmo remaining: ${totalammodata}`);
+                              console.log(`[NeuroVegas] Neuro killed ${kill[0]} with ${kill[1]}. Ammo remaining: ${totalammodata}`);
                             } else {
                               neuroClient.sendContext(`You killed ${kill[0]} with ${kill[1]}.`);
+                              console.log(`[NeuroVegas] Neuro killed ${kill[0]} with ${kill[1]}.`);
                             }
                           }
                       } else {
                         if (kill[3] == playername) {
                           player_stole_neuros_kill = 1;
                         }
-                          if (kill[1] == "0") {
-                            neuroClient.sendContext(`${kill[3]} killed ${kill[0]}.`,true);
-                          } else {
-                            neuroClient.sendContext(`${kill[3]} killed ${kill[0]} with ${kill[1]}.`,true);
-                          }
-
+                        neuroClient.sendContext(`${kill[3]} killed ${kill[0]} with ${kill[1]}.`,true);
+                        console.log(`[NeuroVegas] ${kill[3]} killed ${kill[0]} with ${kill[1]}.`);
                       }
                         neuro_kill_id = Number(kill[2]);
                         writeDataToFile("0","attack.txt");
@@ -2134,7 +2240,8 @@ if (waiting_for_action_result == 1) {
                       if (Number(playerkill[2]) != player_kill_id) {
                         if (playerkill[1] == "0") {
                           if (player_stole_neuros_kill == 0) {
-                            neuroClient.sendContext(`${playername} killed ${playerkill[0]} with their bare fists.`,true);     
+                            neuroClient.sendContext(`${playername} killed ${playerkill[0]} with their bare fists.`,true);  
+                            console.log(`[NeuroVegas] ${playername} killed ${playerkill[0]} with their bare fists.`);   
                           } else {
                             player_stole_neuros_kill = 0;
                           }
@@ -2142,6 +2249,7 @@ if (waiting_for_action_result == 1) {
                         } else {
                           if (player_stole_neuros_kill == 0) {
                             neuroClient.sendContext(`${playername} killed ${playerkill[0]} with ${playerkill[1]}.`,true);
+                            console.log(`[NeuroVegas] ${playername} killed ${playerkill[0]} with ${playerkill[1]}.`);
                           } else {
                             player_stole_neuros_kill = 0;
                           }
@@ -2168,11 +2276,18 @@ if (waiting_for_action_result == 1) {
                 if (combatstate == "0"  &&  current_fleestate == "0") {
                   //neuroClient.unregisterActions(['flee_from_combat','stop_fleeing']);
                   if (is_in_combat == 1) {
-                    setTimeout(() => {
-                      neuroClient.sendContext(`No more hostiles detected, combat has ended!\nCurrent Health: ${currenthealth}/${maxhealth}`,true);
-                      writeDataToFile("0","nearbyhostiles.txt");
-                      is_in_combat = 0;
-                    }, 1000);
+                    if (player_was_dead == 0) {
+                      setTimeout(() => {
+                        neuroClient.sendContext(`No more hostiles detected, combat has ended!\nCurrent Health: ${currenthealth}/${maxhealth}`,true);
+                        console.log(`[NeuroVegas] Neuro has exited combat! Current Health: ${currenthealth}/${maxhealth}`);
+                      }, 1000);
+                    } else {
+                      setTimeout(() => {
+                        player_was_dead = 0;
+                      }, 1000);
+                    }
+                    writeDataToFile("0","nearbyhostiles.txt");
+                    is_in_combat = 0;
                   }
                 } else if (combatstate == "1"  &&  current_fleestate == "0") {
                   if (current_fleestate == "0") {
@@ -2184,10 +2299,13 @@ if (waiting_for_action_result == 1) {
                       is_in_combat = 1;
                       if (nearbyhostiles.length == 1 && nearbyhostiles[0] == "0") {
                         neuroClient.sendContext(`Hostiles detected! Combat has been initiated!\nCurrent Weapon: ${current_weapon}\nCurrent Health: ${currenthealth}/${maxhealth}`,true);
+                        console.log(`[NeuroVegas] Neuro has entered combat! Current Weapon: ${current_weapon} Current Health: ${currenthealth}/${maxhealth}`);
                       } else if (nearbyhostiles.length == 1 && nearbyhostiles[0] != "0") {
                         neuroClient.sendContext(`Hostiles detected! Combat has been initiated against ${nearbyhostiles[0]}!\nCurrent Weapon: ${current_weapon}\nCurrent Health: ${currenthealth}/${maxhealth}`,true);
+                        console.log(`[NeuroVegas] Neuro has entered combat against ${nearbyhostiles[0]}! Current Weapon: ${current_weapon} Current Health: ${currenthealth}/${maxhealth}`);
                       } else if (nearbyhostiles.length > 1) {
                         neuroClient.sendContext(`Hostiles detected! Combat has been initiated!\nNearby Hostiles: ${nearbyhostiles.join(', ')}\nCurrent Weapon: ${current_weapon}\nCurrent Health: ${currenthealth}/${maxhealth}`,true);
+                        console.log(`[NeuroVegas] Neuro has entered combat! Nearby Hostiles: ${nearbyhostiles.join(', ')} Current Weapon: ${current_weapon} Current Health: ${currenthealth}/${maxhealth}`);
                       }
                     }
                   } else if (current_fleestate == "1") {
@@ -2210,14 +2328,19 @@ if (waiting_for_action_result == 1) {
   //#endregion
 
 
+
+
     }
       writeDataToFile(String(disable_writing),"disable_writing.txt");
     });
+  }
+  });
   } else {
     ResetData();
     currentquest = "0";
     questobjs = "0";
   }
+  
 }
 //#endregion
 
@@ -2239,7 +2362,7 @@ neuroClient.onAction(actionData => {
     if (pausedata != "") {
       is_paused = Number(pausedata);
     }
-    if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blue Narration" && currentlocation != "Slide Show Theatre Room") {
+    if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blues Narration" && currentlocation != "Slide Show Theatre Room") {
       if (is_paused == 0) {
         if (gamestate == 1) {
           if (isindialoguedata == "0" || actionData.name === 'check_inventory' || actionData.name === 'check_health_status') {
@@ -2352,18 +2475,18 @@ neuroClient.onAction(actionData => {
                   return;
                 }
               //set combat mode to defensive
-                if (actionData.name === 'set_combat_mode_to_defensive') {
+                if (actionData.name === 'switch_to_passive_mode') {
                   writeDataToFile(String(1) + "\n" + String(1),"combatmode.txt");
-                  neuroClient.unregisterActions(['set_combat_mode_to_defensive'])
+                  neuroClient.unregisterActions(['switch_to_passive_mode'])
                   actionresult_data = actionData;
                   waiting_for_action_result = 1;
                   return;
                 }  
 
                 //set combat mode to offensive
-                if (actionData.name === 'set_combat_mode_to_offensive') {
+                if (actionData.name === 'switch_to_aggressive_mode') {
                   writeDataToFile(String(1) + "\n" + String(0),"combatmode.txt");
-                  neuroClient.unregisterActions(['set_combat_mode_to_offensive'])
+                  neuroClient.unregisterActions(['switch_to_aggressive_mode'])
                   actionresult_data = actionData;
                   waiting_for_action_result = 1;
                   return;
@@ -2690,7 +2813,7 @@ function onProgramExit() {
   neuroClient.unregisterActions([
     'equip_weapon', 'unequip_weapon', 'choose_weapon_to_equip', 'use_consumable', 'choose_consumable_to_use', 
     'switch_ammo', 'choose_ammo_to_switch', 'disengage_combat', 're-engage_combat', 'stop_following', 
-    'resume_following', 'jump', 'set_combat_mode_to_defensive', 'set_combat_mode_to_offensive', 
+    'resume_following', 'jump', 'switch_to_passive_mode', 'switch_to_aggressive_mode', 
     'check_inventory', 'save_game', 'check_health_status', 'check_inventory'
   ]);
 }

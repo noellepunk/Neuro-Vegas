@@ -33,8 +33,8 @@ All of the expansion [DLCs](https://store.steampowered.com/sub/13435/) for Fallo
 If you are attempting to install this mod on a fresh installation of New Vegas, I highly recommend using the vanilla portion of [Viva New Vegas](https://vivanewvegas.moddinglinked.com/) as your base for maximum stability and minimal issues.
 
 
-1. Download the latest version of the mod from the Releases tab
-2. Install the mod through your mod manager, if you are not using a mod manager (which you really should be) then place everything inside the `NeuroVegas` folder within the zip file into the `Data` folder in your New Vegas directory
+1. Download the latest version of the `NeuroVegasMod` zip file from the Releases tab
+2. Install the mod through your mod manager, if you do not wish to install this mod via a mod manager then place everything inside the `NeuroVegas` folder within the zip file into the `Data` folder in your New Vegas directory
 3. If you plan on using the neuro integration part of this mod then download the NeuroVegasClient from this repository (if not then, open the `NeuroConfig.ini` file located at `Data\Config\NeuroConfig.ini` and set EnableNeuroIntegration from 1 to 0 and enjoy!)
 5. Within the NeuroVegasClient folder, open the `config.ini` file and set the directory of your New Vegas installation and the websocket URL you wish to connect to
 6. Run `npm install` in the NeuroVegasClient folder
@@ -48,7 +48,7 @@ Actions that Neuro can perform:
 - Saving the game (these are treated as autosaves)
 - Checking her current health (includes what limbs are broken, if any)
 - Checking whats currently in her inventory
-- Change combat mode (combat mode can either be offensive or defensive. if set to offensive she will attack all enemies on sight, if set to defensive she will only attack in self-defense, useful for stealth)
+- Switch from aggressive mode to passive mode and vice versa, affects whether neuro will attack enemies on sight or wait until the player attacks first
 - Equipping/unequipping weapons from her inventory (if a weapon in her inventory uses ammo but she does not have any, she will not be able to equip it)
 - Swap ammo types (if she has any)
 - Use consumable items and benefit from their effects (if she has any)
@@ -99,7 +99,6 @@ This mod is not entirely perfect and there are some issues that I haven't been a
 - Sometimes player kill context will fail to send, most commonly occurs when an enemy is killed from far away or a group of enemies are bunched up close together
 - Sometimes dialogue context will fail to send, most commonly occurs when an actor is talking through an object (i.e radio or intercom), but otherwise it is *somewhat* rare
 - Sometimes dialogue context will be incorrect, most commonly occurs when purchasing something from a vendor
-- Due to how bright Neuro's textures are, she will start glowing like crazy whenever she is directly facing the sun, this can technically be fixed by disabling HDR in the game's preferences file but this also makes the game look significally worse so I personally recommend against it
 - If Neuro Integration is enabled, whenever Neuro has a throwable weapon equipped, she will never run out during combat (It is kinda funny to watch Neuro endlessly lob grenades at an enemy with no regard for anyone's safety so I consider this to be more of a feature)
 - I also recommend keeping save-scumming to a minimum, as it may confuse Neuro if she is sent context about a quest shes already completed or an enemy shes already killed
 
