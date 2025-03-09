@@ -97,8 +97,6 @@ Other features of the mod:
 This mod is not entirely perfect and there are some issues that I haven't been able to fix
 
 - Sometimes player kill context will fail to send, most commonly occurs when an enemy is killed from far away or a group of enemies are bunched up close together
-- Sometimes dialogue context will fail to send, most commonly occurs when an actor is talking through an object (i.e radio or intercom), but otherwise it is *somewhat* rare
-- Sometimes dialogue context will be incorrect, most commonly occurs when purchasing something from a vendor
 - If Neuro Integration is enabled, whenever Neuro has a throwable weapon equipped, she will never run out during combat (It is kinda funny to watch Neuro endlessly lob grenades at an enemy with no regard for anyone's safety so I consider this to be more of a feature)
 - I also recommend keeping save-scumming to a minimum, as it may confuse Neuro if she is sent context about a quest shes already completed or an enemy shes already killed
 

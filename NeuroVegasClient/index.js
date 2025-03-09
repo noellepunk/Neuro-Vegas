@@ -212,14 +212,6 @@ let weapon_to_equip = "";
 let consumable_to_use = "";
 let ammo_to_equip = "";
 
-let waiting_for_equip_result = 0;
-let waiting_for_aid_result = 0;
-let waiting_for_ammo_result = 0;
-let waiting_for_follow_result = 0;
-let waiting_for_combatmoderesult = 0;
-let waiting_for_save_result = 0;
-let waiting_for_jump_result = 0;
-
 //#endregion
 
 writeDataToFile(String(disable_writing),"disable_writing.txt");
