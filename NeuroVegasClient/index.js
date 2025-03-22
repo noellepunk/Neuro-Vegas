@@ -173,6 +173,7 @@ let playerkill = [];
 
 let neuro_kill_id = 0;
 let player_kill_id = 0;
+let player_kill_id_2 = 0;
 
 let is_unconscious = 0;
 
@@ -211,6 +212,7 @@ let actionresult_data = 0;
 let weapon_to_equip = "";
 let consumable_to_use = "";
 let ammo_to_equip = "";
+let last_completed_quest = "";
 
 //#endregion
 
@@ -248,6 +250,7 @@ function ResetData () {
   writeDataToFile("-1","limb.txt");
   writeDataToFile("0","disable_writing.txt");
   writeDataToFile("0","isindialogue.txt");
+  last_completed_quest = "";
 }
 
 function ResetDataKnocked() {
@@ -279,6 +282,7 @@ function ResetDataKnocked() {
   writeDataToFile("-1","limb.txt");
   writeDataToFile("0","disable_writing.txt");
   writeDataToFile("0","isindialogue.txt");
+  last_completed_quest = "";
 }
 
 //#endregion
@@ -982,6 +986,8 @@ if (waiting_for_action_result == 1) {
     
     if (isRunningNow == true) {
 
+    
+
 
     readFile(gamestateFilePath, 'utf-8', (err, gamestatedata) => {
       if (err) {
@@ -1184,6 +1190,19 @@ if (waiting_for_action_result == 1) {
 
     if (startupcontextsent == 1) {
       if (gamestate == 1) {
+
+        readFile(limbcheckFilePath, 'utf-8', (err, limbcheckdata) => {
+          if (err) {
+              console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
+              return;
+          }
+
+          if (Number(limbcheckdata) == 1) {
+            last_completed_quest = "";
+          }
+        });
+
+
         //#region Player name
         //update player name
         readFile(playerFilePath, 'utf-8', (err, playerdata) => {
@@ -1219,7 +1238,6 @@ if (waiting_for_action_result == 1) {
         //#endregion
 
         //#region Player Death Context
-        //update player name
         readFile(playerdeadFilePath, 'utf-8', (err, playerdeaddata) => {
           if (err) {
               console.error(`[NeuroVegas] Error Reading File: ${err.message}`);
@@ -1537,7 +1555,7 @@ if (waiting_for_action_result == 1) {
                   currenttime = time;
 
                   indoors = Number(locationdata[1]);
-                  if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blue Narration" && currentlocation != "Slide Show Theatre Room") {
+                  if (currentlocation != "Endgame" && currentlocation != "Dead Money Narration" && currentlocation != "Old World Blues Narration" && currentlocation != "Slide Show Theatre Room") {
                     if (indoors == 0) {
                       neuroClient.sendContext(`Current location is now: ${currentlocation} (Outdoors)\nCurrent time is: ${time}`,true);
                       console.log(`[NeuroVegas] Location context sent:\n` + `Current location is now: ${currentlocation} (Outdoors)\nCurrent time is: ${time}`);
@@ -2053,15 +2071,21 @@ if (waiting_for_action_result == 1) {
           return;
         }
 
-        //quest successfully completed
         if (queststatusdata == "1") {
-          neuroClient.sendContext(`QUEST COMPLETED: ${currentquest}`);
-          console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST COMPLETED: ${currentquest}`);
+           //quest completed
+           if (last_completed_quest !== currentquest) {
+            neuroClient.sendContext(`QUEST COMPLETED: ${currentquest}`);
+            console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST COMPLETED: ${currentquest}`);
+            last_completed_quest = currentquest;
+          }
           writeDataToFile("0", "queststatus.txt");
-          //quest failed 
         } else if (queststatusdata == "2") {
-          neuroClient.sendContext(`QUEST FAILED: ${currentquest}`);
-          console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST FAILED: ${currentquest}`);
+          //quest failed 
+          if (last_completed_quest !== currentquest) {
+            neuroClient.sendContext(`QUEST FAILED: ${currentquest}`);
+            console.log(`[NeuroVegas] Quest context sent:\n` + `QUEST FAILED: ${currentquest}`);
+            last_completed_quest = currentquest;
+          }
           writeDataToFile("0", "queststatus.txt");
         }
 
@@ -2213,7 +2237,19 @@ if (waiting_for_action_result == 1) {
                         if (kill[3] == playername) {
                           player_stole_neuros_kill = 1;
                         }
-                        neuroClient.sendContext(`${kill[3]} killed ${kill[0]} with ${kill[1]}.`,true);
+                        if (kill[1] !== "0") {
+                          neuroClient.sendContext(`${kill[3]} killed ${kill[0]} with ${kill[1]}.`,true);
+                        } else {
+                          if (kill[3] !== kill[0]) {
+                            neuroClient.sendContext(`${kill[3]} killed ${kill[0]}.`,true);
+                          } else {
+                            if (kill[0].toLowerCase === "yangtze camp survivor") {
+                              neuroClient.sendContext(`${kill[3]} was killed by their own bomb collar.`,true);
+                            } else {
+                              neuroClient.sendContext(`${kill[3]} killed ${kill[0]}.`,true);
+                            }
+                          }
+                        }
                         console.log(`[NeuroVegas] ${kill[3]} killed ${kill[0]} with ${kill[1]}.`);
                       }
                         neuro_kill_id = Number(kill[2]);
@@ -2227,9 +2263,9 @@ if (waiting_for_action_result == 1) {
                   playerattack_data = playerattackdata;
                   if (playerattack_data != "0"){
                     playerkill = parseMultiLineString(playerattack_data);
-                    if (playerkill.length > 2) {
+                    if (playerkill.length > 3) {
 
-                      if (Number(playerkill[2]) != player_kill_id) {
+                      if (Number(playerkill[2]) != player_kill_id || Number(playerkill[3] != player_kill_id_2 )) {
                         if (playerkill[1] == "0") {
                           if (player_stole_neuros_kill == 0) {
                             neuroClient.sendContext(`${playername} killed ${playerkill[0]} with their bare fists.`,true);  
@@ -2237,7 +2273,8 @@ if (waiting_for_action_result == 1) {
                           } else {
                             player_stole_neuros_kill = 0;
                           }
-                          player_kill_id = playerkill[2];
+                          player_kill_id = Number(playerkill[2]);
+                          player_kill_id_2 = Number(playerkill[3]);
                         } else {
                           if (player_stole_neuros_kill == 0) {
                             neuroClient.sendContext(`${playername} killed ${playerkill[0]} with ${playerkill[1]}.`,true);
@@ -2245,7 +2282,8 @@ if (waiting_for_action_result == 1) {
                           } else {
                             player_stole_neuros_kill = 0;
                           }
-                          player_kill_id = playerkill[2];
+                          player_kill_id = Number(playerkill[2]);
+                          player_kill_id_2 = Number(playerkill[3]);
                         }
                       }
                     }
